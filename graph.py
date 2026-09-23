@@ -71,6 +71,9 @@ def parse_json(text: str):
 
 # ① 기획 — 코디네이터는 문서 카드(앞 CARD_LEN자)만 보고 목차·역할·시작자료·예산을 정한다
 def plan(s: State):
+    if s.get("plan"):   # 데모에서 사람이 확인·수정한 목차를 넘긴 경우 — 다시 짜지 않는다
+        return {"round": 0, "log": [f"기획: 사람이 확정한 목차 {len(s['plan'])}개 — " +
+                                    ", ".join(p["title"] for p in s["plan"])]}
     cfg, docs = s["cfg"], s["corpus"]["docs"]
     cards = "\n".join(f"- {t}: {v[:CARD_LEN].replace(chr(10), ' ')}" for t, v in docs.items())
     system = ("너는 시장조사 팀의 코디네이터다. 질문에 답할 보고서 목차를 짜라. "
@@ -211,16 +214,27 @@ def build():
     return g.compile()
 
 
-def run(question: str, cfg: dict = None, label: str = "base", on_log=print) -> dict:
+def propose_plan(question: str, cfg: dict = None) -> dict:
+    """목차만 뽑는다 (데모의 목차 확인 단계용). 반환: {plan, alarms, log}. 이 호출의 글자 수는 run(approved_plan=...)이 이어받는다."""
+    cfg = cfg or CFG
+    for k in llm.USAGE:
+        llm.USAGE[k] = 0
+    return plan({"question": question, "cfg": cfg, "corpus": load_corpus(cfg["market"])})
+
+
+def run(question: str, cfg: dict = None, label: str = "base", on_log=print, approved_plan: list = None) -> dict:
     """한 번 돌리고 output/runs/<시각>_<라벨>/ 에 목차·원고·읽은 기록·보고서·지표를 남긴다."""
     cfg = cfg or CFG
     corpus = load_corpus(cfg["market"])
-    for k in llm.USAGE:
-        llm.USAGE[k] = 0
+    if not approved_plan:            # 목차를 propose_plan 으로 미리 뽑았다면 그 글자 수를 이어서 센다
+        for k in llm.USAGE:
+            llm.USAGE[k] = 0
     t0 = time.time()
     out, n = {}, 0
-    for out in build().stream({"question": question, "cfg": cfg, "corpus": corpus, "drafts": {}, "alarms": []},
-                              stream_mode="values"):
+    init = {"question": question, "cfg": cfg, "corpus": corpus, "drafts": {}, "alarms": []}
+    if approved_plan:
+        init["plan"] = approved_plan
+    for out in build().stream(init, stream_mode="values"):
         for line in out.get("log", [])[n:]:
             on_log(line)                      # 웹 화면 진행 패널로 흘려보낼 자리
         n = len(out.get("log", []))
