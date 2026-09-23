@@ -39,7 +39,7 @@
 <div class="wrap">
   <div class="col">
     <h2>대화</h2>
-    <div id="stages"><span data-s="scope">1 시장 정하기</span> · <span data-s="upload">2 자료</span> · <span data-s="question">3 조사</span> <button id="reset" style="padding:2px 8px;font-size:1em">처음부터</button></div>
+    <div id="stages"><span data-s="scope">1 시장 정하기</span> · <span data-s="upload">2 자료</span> · <span data-s="toc">3 목차 확인</span> · <span data-s="question">4 조사</span> <button id="reset" style="padding:2px 8px;font-size:1em">처음부터</button></div>
     <ul id="msgs"></ul>
     <div class="row">
       <input id="q" type="text" placeholder="질문을 입력하세요">
@@ -157,6 +157,13 @@ function renderResult(data) {
     ' · 격리율 ' + r3(m.isolation) +
     ' · 호출 ' + (m.calls !== undefined ? m.calls : '-') +
     ' · 멈춘 이유: ' + (m.stop_reason || '-');
+  if (data.removed_sections && data.removed_sections.length) {
+    const p = document.createElement('p');
+    p.style.color = '#888';
+    p.style.fontSize = '0.85em';
+    p.textContent = '사람이 뺀 절: ' + data.removed_sections.join(', ');
+    reportEl.appendChild(p);
+  }
   const secs = data.sections || {};
   for (const line of (data.report || '').split('\n')) {
     if (line.startsWith('## ')) {

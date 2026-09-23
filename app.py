@@ -1,6 +1,7 @@
 """FastAPI 앱. 실행: uvicorn app:app --reload"""
 import os
 import queue
+import re
 import threading
 from pathlib import Path
 
@@ -14,11 +15,13 @@ import llm
 BASE = Path(__file__).parent
 app = FastAPI()
 
-_state = {"running": False, "done": False, "queue": None, "result": None, "question": ""}
+_state = {"running": False, "done": False, "queue": None, "result": None,
+           "question": "", "removed": []}
 _lock = threading.Lock()
 
-# 단계별 대화 세션 (1인용, 인메모리): scope → upload → question
-_session = {"stage": "scope", "scope": "", "turns": 0, "history": [], "pending_choice": False}
+# 단계별 대화 세션 (1인용, 인메모리): scope → upload → question → toc(목차 확인)
+_session = {"stage": "scope", "scope": "", "turns": 0, "history": [], "pending_choice": False,
+            "pending_q": "", "pending_plan": [], "removed": []}
 
 
 def _push(line: str) -> None:
@@ -27,9 +30,9 @@ def _push(line: str) -> None:
         q.put(str(line).replace("\r", "").replace("\n", " "))
 
 
-def _run_target(question: str) -> None:
+def _run_target(question: str, approved_plan=None, label: str = "base") -> None:
     try:
-        res = graph.run(question, label="base", on_log=_push)
+        res = graph.run(question, label=label, on_log=_push, approved_plan=approved_plan)
         with _lock:
             _state["result"] = {k: v for k, v in res.items() if k != "corpus"}
     except Exception as e:
@@ -62,13 +65,15 @@ async def upload(market: str, files: list[UploadFile]):
     return {"saved": saved}
 
 
-def _start_run(question: str) -> bool:
+def _start_run(question: str, approved_plan=None, label: str = "base", removed=None) -> bool:
     """백그라운드 실행 시작. 이미 실행 중이면 False."""
     with _lock:
         if _state["running"]:
             return False
-        _state.update(running=True, done=False, queue=queue.Queue(), question=question)
-    threading.Thread(target=_run_target, args=(question,), daemon=True).start()
+        _state.update(running=True, done=False, queue=queue.Queue(), question=question,
+                      removed=list(removed or []))
+    threading.Thread(target=_run_target, args=(question, approved_plan, label),
+                     daemon=True).start()
     return True
 
 
@@ -112,6 +117,7 @@ def result():
     with _lock:
         res = _state["result"]
         asked = _state["question"]
+        removed = list(_state.get("removed", []))
     if res is None:
         raise HTTPException(404, "완료된 실행 없음")
     drafts = res.get("drafts", {})
@@ -122,6 +128,7 @@ def result():
         "sections": {t: {"read": d.get("read", []), "text": d.get("text", "")}
                      for t, d in drafts.items()},
         "metrics": res.get("metrics", {}),
+        "removed_sections": removed,
     }
 
 
@@ -165,13 +172,23 @@ def state():
 @app.post("/reset")
 def reset():
     """대화를 처음(시장 정하기)부터 다시."""
-    _session.update(stage="scope", scope="", turns=0, history=[], pending_choice=False)
+    _session.update(stage="scope", scope="", turns=0, history=[], pending_choice=False,
+                    pending_q="", pending_plan=[], removed=[])
     return state()
+
+
+def _toc_reply(plan: list, alarms: list) -> str:
+    """번호 매긴 목차 + 알람 + 확정 안내."""
+    lines = [f"{i}. {p.get('title', '?')} — {p.get('role', '')} "
+             f"(시작 문서: {p.get('seed') or '없음'})" for i, p in enumerate(plan, 1)]
+    lines += [f"! {a}" for a in (alarms or [])]
+    lines.append("이대로 조사할까요? '예' / '빼기 2 4' (번호 빼기) / '다시' (목차 다시 짜기)")
+    return "\n".join(lines)
 
 
 @app.post("/chat")
 def chat(body: dict):
-    """단계별 대화: scope(시장 정하기) → upload(자료) → question(조사 실행)."""
+    """단계별 대화: scope(시장 정하기) → upload(자료) → question(질문) → toc(목차 확인)."""
     text = ((body or {}).get("text") or "").strip()
     if not text:
         raise HTTPException(400, "text가 비어 있음")
@@ -223,7 +240,49 @@ def chat(body: dict):
         return {"stage": "upload",
                 "reply": "자료를 이곳에 끌어다 놓거나, 없으면 '없음'이라고 입력하세요."}
 
-    # 3. 조사 실행 (기존 run 흐름, 끝난 뒤에도 3단계 유지)
-    if not _start_run(text):
-        return {"stage": "question", "reply": "이미 실행 중입니다. 끝나고 다시 물어보세요."}
-    return {"stage": "question", "reply": "조사를 시작합니다.", "run": True}
+    # 3. 목차 확인 (동기 propose_plan; sync 엔드포인트는 FastAPI 스레드풀에서 돈다)
+    if stage == "question":
+        try:
+            prop = graph.propose_plan(text)
+        except Exception as e:
+            return {"stage": "question",
+                    "reply": f"목차를 짜는 데 실패했습니다 ({type(e).__name__}). 다시 질문해 주세요."}
+        _session.update(pending_q=text, pending_plan=prop.get("plan", []),
+                        removed=[], stage="toc")
+        return {"stage": "toc",
+                "reply": "조사하기 전에 목차를 확인하세요.\n"
+                         + _toc_reply(_session["pending_plan"], prop.get("alarms", []))}
+
+    # 4. 목차 확정/수정 (끝나면 다시 question 단계로)
+    plan = _session["pending_plan"]
+    t = text.strip()
+    if t == "다시" or not plan:
+        try:
+            prop = graph.propose_plan(_session["pending_q"] or text)
+        except Exception as e:
+            return {"stage": "toc",
+                    "reply": f"목차를 짜는 데 실패했습니다 ({type(e).__name__}). '다시'라고 입력해 주세요."}
+        _session.update(pending_plan=prop.get("plan", []), removed=[])
+        return {"stage": "toc", "reply": _toc_reply(_session["pending_plan"],
+                                                    prop.get("alarms", []))}
+    if t.lower() in ("예", "네", "ok"):
+        if not _start_run(_session["pending_q"], approved_plan=plan, label="demo",
+                          removed=_session["removed"]):
+            return {"stage": "toc", "reply": "이미 실행 중입니다. 끝나고 다시 답해 주세요."}
+        _session["stage"] = "question"
+        return {"stage": "question", "reply": "조사를 시작합니다.", "run": True}
+    if t.startswith("빼기"):
+        nums = sorted({int(n) for n in re.findall(r"\d+", t)}, reverse=True)
+        if not nums or any(n < 1 or n > len(plan) for n in nums):
+            return {"stage": "toc",
+                    "reply": f"번호를 확인해 주세요 (1~{len(plan)}).\n" + _toc_reply(plan, [])}
+        if len(nums) >= len(plan):
+            return {"stage": "toc",
+                    "reply": "전부 빼면 조사할 절이 없습니다. 최소 1개는 남겨 주세요.\n"
+                             + _toc_reply(plan, [])}
+        for n in nums:
+            _session["removed"].append(plan.pop(n - 1).get("title", "?"))
+        return {"stage": "toc", "reply": _toc_reply(plan, [])}
+    return {"stage": "toc",
+            "reply": "이대로 조사할까요? '예' / '빼기 2 4' (번호 빼기) / '다시' (목차 다시 짜기)\n"
+                     + _toc_reply(plan, [])}

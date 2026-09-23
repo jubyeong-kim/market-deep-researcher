@@ -1,0 +1,122 @@
+기획: 절 3개 — CATL의 기본 정보, CATL의 사업 영역 및 기술, CATL의 시장 경쟁 위치
+조사: CATL의 기본 정보 (0바퀴) 읽음 ['CATL', 'Lithium iron phosphate battery', 'BYD Auto']
+조사: CATL의 사업 영역 및 기술 (0바퀴) 읽음 ['Electric vehicle battery', 'Lithium polymer battery', 'Lithium-ion battery'] · 부족 신고
+조사: CATL의 시장 경쟁 위치 (0바퀴) 읽음 ['BYD Company', 'Samsung SDI', 'SK Innovation']
+점검: 부족 ['CATL의 사업 영역 및 기술'] → 재위임
+조사: CATL의 사업 영역 및 기술 (1바퀴) 읽음 ['Solid-state battery', 'Lithium', 'Cobalt'] · 부족 신고
+점검: 부족 ['CATL의 사업 영역 및 기술'] → 바퀴 소진
+종합 완료
+기획: 절 1개 — CATL 기업 정보
+조사: CATL 기업 정보 (0바퀴) 읽음 ['CATL', 'Lithium iron phosphate battery', 'BYD Company']
+점검: 부족 [] → 내용 충분
+종합 완료
+기획: 절 1개 — CATL (Contemporary Amperex Technology Co., Limited)
+조사: CATL (Contemporary Amperex Technology Co., Limited) (0바퀴) 읽음 ['CATL', 'BYD Company', 'Lithium iron phosphate battery']
+점검: 부족 [] → 내용 충분
+종합 완료
+기획: 절 3개 — CATL 기업 정보, 배터리 기술, 글로벌 배터리 시장
+조사: CATL 기업 정보 (0바퀴) 읽음 ['CATL', 'Lithium iron phosphate battery', 'BYD Auto']
+조사: 배터리 기술 (0바퀴) 읽음 ['Lithium-ion battery', 'Electric vehicle battery', 'Sodium-ion battery']
+조사: 글로벌 배터리 시장 (0바퀴) 읽음 ['BYD Company', 'Tesla, Inc.', 'Electric vehicle']
+점검: 부족 [] → 내용 충분
+종합 완료
+기획: 절 1개 — CATL 회사 개요
+조사: CATL 회사 개요 (0바퀴) 읽음 ['CATL', 'Lithium iron phosphate battery', 'BYD Company']
+점검: 부족 [] → 내용 충분
+종합 완료
+기획: 절 5개 — LG에너지솔루션의 기술 및 사업 포트폴리오, 삼성SDI의 프리미엄 기술 및 차별화 전략, SK온의 가격 경쟁력 기반 시장 확보 전략, 배터리 화학 포트폴리오와 기술 포지셔닝 차이, 한국 자동차 제조사와의 공급 관계 및 고객 전략
+조사: LG에너지솔루션의 기술 및 사업 포트폴리오 (0바퀴) 읽음 ['LG Chem', 'Kia', 'Volkswagen']
+조사: 삼성SDI의 프리미엄 기술 및 차별화 전략 (0바퀴) 읽음 ['Samsung SDI', 'Electric vehicle battery', 'Solid-state battery']
+조사: SK온의 가격 경쟁력 기반 시장 확보 전략 (0바퀴) 읽음 ['SK Innovation', 'Electric vehicle', 'Lithium-ion battery'] · 부족 신고
+조사: 배터리 화학 포트폴리오와 기술 포지셔닝 차이 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Lithium nickel manganese cobalt oxides', 'Nickel–metal hydride battery'] · 부족 신고
+조사: 한국 자동차 제조사와의 공급 관계 및 고객 전략 (0바퀴) 읽음 ['Hyundai Motor Company', 'General Motors', 'Tesla, Inc.'] · 부족 신고
+점검: 부족 ['SK온의 가격 경쟁력 기반 시장 확보 전략', '배터리 화학 포트폴리오와 기술 포지셔닝 차이', '한국 자동차 제조사와의 공급 관계 및 고객 전략'] → 재위임
+조사: SK온의 가격 경쟁력 기반 시장 확보 전략 (1바퀴) 읽음 ['BYD Company', 'CATL', 'Panasonic'] · 부족 신고
+조사: 배터리 화학 포트폴리오와 기술 포지셔닝 차이 (1바퀴) 읽음 ['Lithium', 'Nickel', 'Cobalt'] · 부족 신고
+조사: 한국 자동차 제조사와의 공급 관계 및 고객 전략 (1바퀴) 읽음 ['Ultium', 'Hybrid electric vehicle', 'Charging station'] · 부족 신고
+점검: 부족 ['SK온의 가격 경쟁력 기반 시장 확보 전략', '배터리 화학 포트폴리오와 기술 포지셔닝 차이', '한국 자동차 제조사와의 공급 관계 및 고객 전략'] → 바퀴 소진
+종합 완료
+기획: 절 5개 — LG에너지솔루션의 전략, 삼성SDI의 전략, SK온의 전략, 차세대 배터리 기술 포트폴리오, 주요 고객사 기반 및 공급 전략
+조사: LG에너지솔루션의 전략 (0바퀴) 읽음 ['Electric vehicle', 'Lithium-ion battery', 'Electric vehicle battery'] · 부족 신고
+조사: 삼성SDI의 전략 (0바퀴) 읽음 ['Samsung SDI', 'Hyundai Motor Company', 'Kia'] · 부족 신고
+조사: SK온의 전략 (0바퀴) 읽음 ['SK Innovation', 'LG Chem', 'CATL'] · 부족 신고
+조사: 차세대 배터리 기술 포트폴리오 (0바퀴) 읽음 ['Lithium iron phosphate', 'Lithium iron phosphate battery', 'Solid-state battery'] · 부족 신고
+조사: 주요 고객사 기반 및 공급 전략 (0바퀴) 읽음 ['Tesla, Inc.', 'BYD Company', 'General Motors'] · 부족 신고
+점검: 부족 ['LG에너지솔루션의 전략', '삼성SDI의 전략', 'SK온의 전략', '차세대 배터리 기술 포트폴리오', '주요 고객사 기반 및 공급 전략'] → 재위임
+조사: LG에너지솔루션의 전략 (1바퀴) 읽음 ['Panasonic', 'Volkswagen', 'Ultium'] · 부족 신고
+조사: 삼성SDI의 전략 (1바퀴) 읽음 ['Hybrid electric vehicle', 'Nickel', 'Lithium'] · 부족 신고
+조사: SK온의 전략 (1바퀴) 읽음 ['Toyota', 'Charging station', 'Battery electric vehicle'] · 부족 신고
+조사: 차세대 배터리 기술 포트폴리오 (1바퀴) 읽음 ['Cobalt', 'Rechargeable battery', 'Electric battery'] · 부족 신고
+조사: 주요 고객사 기반 및 공급 전략 (1바퀴) 읽음 ['Electric car', 'Automotive industry', 'Plug-in hybrid'] · 부족 신고
+점검: 부족 ['LG에너지솔루션의 전략', '삼성SDI의 전략', 'SK온의 전략', '차세대 배터리 기술 포트폴리오', '주요 고객사 기반 및 공급 전략'] → 바퀴 소진
+종합 완료
+기획: 절 3개 — LG에너지솔루션의 글로벌 OEM 중심 전략, 삼성SDI의 프리미엄 기술 중심 전략, SK온의 그룹 통합형 수직 통합 전략
+조사: LG에너지솔루션의 글로벌 OEM 중심 전략 (0바퀴) 읽음 ['LG Chem', 'Ultium', 'Electric vehicle battery']
+조사: 삼성SDI의 프리미엄 기술 중심 전략 (0바퀴) 읽음 ['Samsung SDI', 'Electric vehicle battery', 'Lithium iron phosphate battery'] · 부족 신고
+조사: SK온의 그룹 통합형 수직 통합 전략 (0바퀴) 읽음 ['SK Innovation', 'Hyundai Motor Company', 'Kia'] · 부족 신고
+점검: 부족 ['삼성SDI의 프리미엄 기술 중심 전략', 'SK온의 그룹 통합형 수직 통합 전략'] → 재위임
+조사: 삼성SDI의 프리미엄 기술 중심 전략 (1바퀴) 읽음 ['CATL', 'Volkswagen', 'Panasonic'] · 부족 신고
+조사: SK온의 그룹 통합형 수직 통합 전략 (1바퀴) 읽음 ['Electric vehicle battery', 'Volkswagen', 'LG Chem'] · 부족 신고
+점검: 부족 ['삼성SDI의 프리미엄 기술 중심 전략', 'SK온의 그룹 통합형 수직 통합 전략'] → 바퀴 소진
+종합 완료
+기획: 절 3개 — LG에너지솔루션의 글로벌 배터리 전략, 삼성SDI의 프리미엄 기술 차별화, SK온의 국내 고객 중심 전략
+조사: LG에너지솔루션의 글로벌 배터리 전략 (0바퀴) 읽음 ['LG Chem', 'Electric vehicle battery', 'Electric vehicle']
+조사: 삼성SDI의 프리미엄 기술 차별화 (0바퀴) 읽음 ['Samsung SDI', 'Lithium-ion battery', 'Solid-state battery']
+조사: SK온의 국내 고객 중심 전략 (0바퀴) 읽음 ['SK Innovation', 'Hyundai Motor Company', 'Kia'] · 부족 신고
+점검: 부족 ['SK온의 국내 고객 중심 전략'] → 설정으로 끔
+종합 완료
+기획: 절 3개 — 1. LG에너지솔루션의 프리미엄 기술 전략, 2. 삼성SDI의 다층 포트폴리오 전략, 3. SK온의 비용경쟁력 및 확장 전략
+조사: 1. LG에너지솔루션의 프리미엄 기술 전략 (0바퀴) 읽음 ['LG Chem', 'Lithium nickel manganese cobalt oxides', 'Electric vehicle']
+조사: 2. 삼성SDI의 다층 포트폴리오 전략 (0바퀴) 읽음 ['Samsung SDI', 'Lithium-ion battery', 'Electric vehicle battery']
+조사: 3. SK온의 비용경쟁력 및 확장 전략 (0바퀴) 읽음 ['SK Innovation', 'Solid-state battery', 'Lithium iron phosphate battery'] · 부족 신고
+점검: 부족 ['3. SK온의 비용경쟁력 및 확장 전략'] → 재위임
+조사: 3. SK온의 비용경쟁력 및 확장 전략 (1바퀴) 읽음 ['Tesla, Inc.', 'BYD Company', 'Hyundai Motor Company'] · 부족 신고
+점검: 부족 ['3. SK온의 비용경쟁력 및 확장 전략'] → 바퀴 소진
+종합 완료
+기획: 절 5개 — 배터리 제조 기업으로서의 BYD 기원, 배터리 기술 혁신: LFP 배터리의 개발과 보급, 자동차 부문 진출: BYD Auto의 설립과 성장, 전기차 제품 포트폴리오 확장, 글로벌 전기차 시장에서의 경쟁 우위
+조사: 배터리 제조 기업으로서의 BYD 기원 (0바퀴) 읽음 ['BYD Company', 'Battery electric bus', 'Electric vehicle']
+조사: 배터리 기술 혁신: LFP 배터리의 개발과 보급 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Electric vehicle battery', 'Lithium iron phosphate']
+조사: 자동차 부문 진출: BYD Auto의 설립과 성장 (0바퀴) 읽음 ['BYD Auto', 'Hyundai Motor Company', 'Lithium-ion battery']
+조사: 전기차 제품 포트폴리오 확장 (0바퀴) 읽음 ['Battery electric vehicle', 'Charging station', 'Electric car'] · 부족 신고
+조사: 글로벌 전기차 시장에서의 경쟁 우위 (0바퀴) 읽음 ['Tesla, Inc.', 'General Motors', 'Volkswagen'] · 부족 신고
+점검: 부족 ['전기차 제품 포트폴리오 확장', '글로벌 전기차 시장에서의 경쟁 우위'] → 재위임
+조사: 전기차 제품 포트폴리오 확장 (1바퀴) 읽음 ['Plug-in hybrid', 'Electric truck', 'Ultium'] · 부족 신고
+조사: 글로벌 전기차 시장에서의 경쟁 우위 (1바퀴) 읽음 ['Solid-state battery', 'CATL', 'SK Innovation'] · 부족 신고
+점검: 부족 ['전기차 제품 포트폴리오 확장', '글로벌 전기차 시장에서의 경쟁 우위'] → 바퀴 소진
+종합 완료
+기획: 절 4개 — BYD의 배터리 사업 기반, 자동차 산업으로의 진출, 핵심 기술 경쟁력 - LFP 배터리, 글로벌 전기차 시장에서의 선도적 지위
+조사: BYD의 배터리 사업 기반 (0바퀴) 읽음 ['Lithium-ion battery', 'Electric vehicle battery', 'Rechargeable battery'] · 부족 신고
+조사: 자동차 산업으로의 진출 (0바퀴) 읽음 ['Hyundai Motor Company', 'Kia', 'Volkswagen'] · 부족 신고
+조사: 핵심 기술 경쟁력 - LFP 배터리 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'BYD Auto', 'Lithium iron phosphate']
+조사: 글로벌 전기차 시장에서의 선도적 지위 (0바퀴) 읽음 ['Electric vehicle', 'Tesla, Inc.', 'BYD Company']
+점검: 부족 ['BYD의 배터리 사업 기반', '자동차 산업으로의 진출'] → 재위임
+조사: BYD의 배터리 사업 기반 (1바퀴) 읽음 ['Nickel–cadmium battery', 'Nickel–metal hydride battery', 'Sodium-ion battery'] · 부족 신고
+조사: 자동차 산업으로의 진출 (1바퀴) 읽음 ['Solid-state battery', 'General Motors', 'Samsung SDI'] · 부족 신고
+점검: 부족 ['BYD의 배터리 사업 기반', '자동차 산업으로의 진출'] → 바퀴 소진
+종합 완료
+기획: 절 4개 — 배터리 비즈니스 기초와 자동차 진출, LFP 배터리 기술 경쟁력, 전기차 제품 포트폴리오 확대, 글로벌 시장에서의 경쟁 위치
+조사: 배터리 비즈니스 기초와 자동차 진출 (0바퀴) 읽음 ['BYD Company', 'Hyundai Motor Company', 'Lithium-ion battery'] · 부족 신고
+조사: LFP 배터리 기술 경쟁력 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Electric vehicle battery', 'BYD Auto']
+조사: 전기차 제품 포트폴리오 확대 (0바퀴) 읽음 ['BYD Auto', 'Lithium-ion battery', 'Electric vehicle']
+조사: 글로벌 시장에서의 경쟁 위치 (0바퀴) 읽음 ['Tesla, Inc.', 'Electric vehicle', 'Lithium-ion battery'] · 부족 신고
+점검: 부족 ['배터리 비즈니스 기초와 자동차 진출', '글로벌 시장에서의 경쟁 위치'] → 재위임
+조사: 배터리 비즈니스 기초와 자동차 진출 (1바퀴) 읽음 ['Electric vehicle', 'Electric vehicle battery', 'Solid-state battery'] · 부족 신고
+조사: 글로벌 시장에서의 경쟁 위치 (1바퀴) 읽음 ['Electric vehicle battery', 'Solid-state battery', 'Lithium iron phosphate battery'] · 부족 신고
+점검: 부족 ['배터리 비즈니스 기초와 자동차 진출', '글로벌 시장에서의 경쟁 위치'] → 바퀴 소진
+종합 완료
+기획: 절 5개 — BYD의 배터리 제조 기반, 전기차 사업 진출 및 BYD Auto, LFP 배터리 기술 경쟁력, 상용차 및 다양한 모빌리티 세그먼트, 글로벌 시장 진출과 경쟁 구도
+조사: BYD의 배터리 제조 기반 (0바퀴) 읽음 ['BYD Company', 'Lithium-ion battery', 'Electric vehicle']
+조사: 전기차 사업 진출 및 BYD Auto (0바퀴) 읽음 ['BYD Auto', 'Electric vehicle battery', 'Hyundai Motor Company']
+조사: LFP 배터리 기술 경쟁력 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Lithium iron phosphate', 'Solid-state battery']
+조사: 상용차 및 다양한 모빌리티 세그먼트 (0바퀴) 읽음 ['Battery electric bus', 'Charging station', 'Volkswagen'] · 부족 신고
+조사: 글로벌 시장 진출과 경쟁 구도 (0바퀴) 읽음 ['Tesla, Inc.', 'General Motors', 'CATL'] · 부족 신고
+점검: 부족 ['상용차 및 다양한 모빌리티 세그먼트', '글로벌 시장 진출과 경쟁 구도'] → 설정으로 끔
+종합 완료
+기획: 절 4개 — BYD의 사업 전략과 포트폴리오, BYD 자동차 사업의 성장과 확장, LFP 배터리 기술의 경쟁 우위, 글로벌 전기차 시장에서의 경쟁 위치
+label             n  ground  concen    dup   isol  calls   secs  alarms
+base              3   0.557   0.552     0.0   0.075   8.333 279.467       8
+no_assignment     3   0.534   0.631     0.0   0.141   7.667 209.267       8
+no_zones          3   0.466   0.599   0.256   0.155     6.0   164.5       3
+no_redelegation   3   0.685   0.462     0.0   0.118   5.667   220.7       9
+no_links          2   0.426    0.69     0.0   0.208     4.5  146.15       7
+baseline          2   0.216    0.49     0.0     1.0     1.0    39.8      16
