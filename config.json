@@ -1,0 +1,22 @@
+{
+  "backend": "claude_sdk",
+  "model": {"claude_sdk": "claude-haiku-4-5", "openai": "gpt-4o-mini"},
+  "market": "demo",
+
+  "max_sections": 6,
+  "section_budget": 3,
+  "max_rounds": 2,
+
+  "context_window_chars": 400000,
+  "min_docs": 30,
+
+  "collect_parts": ["시장규모", "경쟁사", "규제", "가격", "소비자", "유통"],
+
+  "switches": {
+    "assignment": true,
+    "zones": true,
+    "redelegation": true,
+    "links": true,
+    "web_on_question": false
+  }
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>deep researcher</title>
+<style>
+  body { font-family: sans-serif; margin: 0; background: #f5f5f5; }
+  .wrap { display: flex; gap: 12px; padding: 12px; max-width: 1000px; margin: 0 auto; }
+  .col { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; flex: 1; min-width: 0; }
+  #msgs { list-style: none; padding: 0; margin: 0 0 8px; max-height: 50vh; overflow-y: auto; }
+  #msgs li { background: #f0f4ff; margin: 4px 0; padding: 6px 8px; border-radius: 6px; word-break: break-all; }
+  #drop { border: 2px dashed #888; border-radius: 8px; padding: 20px; text-align: center; color: #555; margin-bottom: 8px; }
+  #drop.over { background: #eef; border-color: #36c; }
+  #steps { list-style: none; padding: 0; margin: 8px 0 0; }
+  #steps li { border-left: 3px solid #36c; padding: 4px 8px; margin: 4px 0; background: #fafafa; }
+  .row { display: flex; gap: 6px; }
+  input[type=text] { flex: 1; padding: 8px; }
+  button { padding: 8px 12px; cursor: pointer; }
+  @media (max-width: 700px) { .wrap { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="col">
+    <h2>대화</h2>
+    <ul id="msgs"></ul>
+    <div class="row">
+      <input id="q" type="text" placeholder="질문을 입력하세요">
+      <button id="send">전송</button>
+    </div>
+    <div id="drop" style="margin-top:8px">자료를 여기에 끌어다 놓으세요</div>
+  </div>
+  <div class="col">
+    <h2>진행 과정</h2>
+    <button id="watch">진행 보기</button>
+    <ul id="steps"></ul>
+  </div>
+</div>
+<script>
+const msgs = document.getElementById('msgs');
+const steps = document.getElementById('steps');
+document.getElementById('send').onclick = () => {
+  const q = document.getElementById('q');
+  if (!q.value.trim()) return;
+  const li = document.createElement('li');
+  li.textContent = q.value;
+  msgs.appendChild(li);
+  q.value = '';
+};
+const drop = document.getElementById('drop');
+['dragover', 'dragenter'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', async (ev) => {
+  const fd = new FormData();
+  for (const f of ev.dataTransfer.files) fd.append('files', f);
+  const res = await fetch('/upload/demo', { method: 'POST', body: fd });
+  const li = document.createElement('li');
+  li.textContent = '업로드: ' + JSON.stringify(await res.json());
+  msgs.appendChild(li);
+});
+document.getElementById('watch').onclick = () => {
+  const es = new EventSource('/events');
+  es.onmessage = (ev) => {
+    const li = document.createElement('li');
+    li.textContent = ev.data;
+    steps.appendChild(li);
+  };
+  es.onerror = () => es.close();
+};
+</script>
+</body>
+</html>
