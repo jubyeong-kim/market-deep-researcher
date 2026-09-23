@@ -21,6 +21,30 @@
 
 ## 4. 파이프라인 구조도
 
+```mermaid
+flowchart TD
+    START([질문 + cfg + corpus]) --> plan
+    plan["① plan (코디네이터)<br/>문서 카드 150자만 보고 목차 작성<br/>시작문서가 코퍼스에 있는지 코드 검사"]
+    plan -->|"Send × 절 수"| research
+    research["③ research (서브에이전트, 병렬)<br/>pick_docs: 시작문서 → 링크 → 단어 겹침<br/>예산만큼 읽고 원고 + '부족: 예/아니오'"]
+    research --> check
+    check{"④ check (LLM 0회)<br/>부족 신고한 절이 있나?"}
+    check -->|"있음 · 바퀴 남음 · 재위임 켜짐<br/>Send × 신고한 절만"| research
+    check -->|"내용 충분 / 바퀴 소진 / 설정으로 끔"| synthesize
+    synthesize["⑤ synthesize (코디네이터)<br/>절 제목만 보고 머리말·맺음말<br/>절 본문은 손대지 않음"]
+    synthesize --> END([report])
+    END --> metrics["⑥ metrics.compute<br/>정답표·판정모델 없이"]
+```
+
+| State 필드 | 리듀서 | 누가 쓰나 |
+|---|---|---|
+| `plan` | 덮어쓰기 | plan |
+| `drafts` | `keep_better` — 재위임 원고는 인용 수가 첫 원고 이상일 때만 채택, 읽은 기록은 누적 | research |
+| `round`, `stop_reason` | 덮어쓰기 | plan, check |
+| `alarms`, `log` | 이어 붙이기 | plan / 전 노드 |
+
+격리 측정: `llm.ask(coord=True/False)` 가 코디네이터와 서브에이전트가 받은 글자를 따로 센다 → `isolation = coord / (coord + sub)`.
+
 ## 5. 데모 설계
 
 ## 6. 회고

@@ -8,16 +8,28 @@
   body { font-family: sans-serif; margin: 0; background: #f5f5f5; }
   .wrap { display: flex; gap: 12px; padding: 12px; max-width: 1000px; margin: 0 auto; }
   .col { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; flex: 1; min-width: 0; }
+  .panel { max-width: 1000px; margin: 0 auto 16px; padding: 0 12px; }
+  .panel .box { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
   #msgs { list-style: none; padding: 0; margin: 0 0 8px; max-height: 50vh; overflow-y: auto; }
-  #msgs li { background: #f0f4ff; margin: 4px 0; padding: 6px 8px; border-radius: 6px; word-break: break-all; }
+  #msgs li { margin: 4px 0; padding: 6px 8px; border-radius: 6px; word-break: break-all; }
+  #msgs li.bot { background: #eef3e6; }
+  #msgs li.user { background: #f0f4ff; text-align: right; }
   #drop { border: 2px dashed #888; border-radius: 8px; padding: 20px; text-align: center; color: #555; margin-bottom: 8px; }
   #drop.over { background: #eef; border-color: #36c; }
-  #steps { list-style: none; padding: 0; margin: 8px 0 0; }
-  #steps li { border-left: 3px solid #36c; padding: 4px 8px; margin: 4px 0; background: #fafafa; }
+  #steps { list-style: none; padding: 0; margin: 8px 0 0; max-height: 50vh; overflow-y: auto; }
+  #steps li { border-left: 3px solid #36c; padding: 4px 8px; margin: 4px 0; background: #fafafa; word-break: break-all; }
   .row { display: flex; gap: 6px; }
-  input[type=text] { flex: 1; padding: 8px; }
+  input[type=text] { flex: 1; padding: 8px; min-width: 0; }
   button { padding: 8px 12px; cursor: pointer; }
-  @media (max-width: 700px) { .wrap { flex-direction: column; } }
+  .rep-flex { display: flex; gap: 12px; }
+  #report { flex: 3; min-width: 0; }
+  #side { flex: 2; min-width: 0; background: #fafafa; border: 1px solid #ddd; border-radius: 6px; padding: 8px; align-self: flex-start; position: sticky; top: 8px; }
+  #side h4 { margin: 0 0 6px; }
+  #side p { white-space: pre-wrap; word-break: break-all; font-size: 0.9em; }
+  sup.cite { color: #36c; cursor: pointer; font-size: 0.75em; margin: 0 1px; }
+  #metrics { font-size: 0.85em; color: #444; background: #f6f6f6; padding: 6px 8px; border-radius: 6px; margin-bottom: 8px; }
+  details { margin: 4px 0 12px; font-size: 0.9em; }
+  @media (max-width: 700px) { .wrap { flex-direction: column; } .rep-flex { flex-direction: column; } }
 </style>
 </head>
 <body>
@@ -33,41 +45,177 @@
   </div>
   <div class="col">
     <h2>진행 과정</h2>
-    <button id="watch">진행 보기</button>
     <ul id="steps"></ul>
+  </div>
+</div>
+<div class="panel">
+  <div class="box">
+    <h2>보고서</h2>
+    <div id="metrics">아직 실행된 조사가 없습니다.</div>
+    <div class="rep-flex">
+      <div id="report"></div>
+      <div id="side"><h4>인용 원문</h4><p id="excerpt">위 보고서의 [숫자]를 누르면 원문 앞부분이 여기에 나옵니다.</p></div>
+    </div>
   </div>
 </div>
 <script>
 const msgs = document.getElementById('msgs');
 const steps = document.getElementById('steps');
-document.getElementById('send').onclick = () => {
-  const q = document.getElementById('q');
-  if (!q.value.trim()) return;
+const reportEl = document.getElementById('report');
+const metricsEl = document.getElementById('metrics');
+const excerptEl = document.getElementById('excerpt');
+const citeNo = {};  // 문서제목 -> 번호
+let es = null;
+
+function addMsg(text, who) {
   const li = document.createElement('li');
-  li.textContent = q.value;
+  li.className = who;
+  li.textContent = text;
   msgs.appendChild(li);
+}
+addMsg('어떤 시장을 조사하고 싶으세요?', 'bot');
+
+function addStep(text) {
+  const li = document.createElement('li');
+  li.textContent = text;
+  steps.appendChild(li);
+  li.scrollIntoView(false);
+}
+
+// «제목» -> 텍스트 노드 + sup[번호] (title=제목, 클릭하면 원문 조회)
+function appendCited(parent, text) {
+  const re = /«([^»]+)»/g;
+  let last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+    const title = m[1];
+    if (!(title in citeNo)) citeNo[title] = Object.keys(citeNo).length + 1;
+    const sup = document.createElement('sup');
+    sup.className = 'cite';
+    sup.textContent = '[' + citeNo[title] + ']';
+    sup.title = title;
+    sup.addEventListener('click', () => showDoc(title));
+    parent.appendChild(sup);
+    last = m.index + m[0].length;
+  }
+  parent.appendChild(document.createTextNode(text.slice(last)));
+}
+
+async function showDoc(title) {
+  excerptEl.textContent = '불러오는 중...';
+  try {
+    const res = await fetch('/doc/' + encodeURIComponent(title));
+    if (!res.ok) { excerptEl.textContent = '문서를 찾을 수 없음: ' + title; return; }
+    const d = await res.json();
+    excerptEl.textContent = '«' + d.title + '»\n\n' + d.excerpt;
+  } catch (e) {
+    excerptEl.textContent = '원문 조회 실패';
+  }
+}
+
+function renderResult(data) {
+  for (const k in citeNo) delete citeNo[k];
+  reportEl.replaceChildren();
+  const m = data.metrics || {};
+  const r3 = (v) => (typeof v === 'number' ? v.toFixed(3) : '-');
+  metricsEl.textContent =
+    '근거율 ' + r3(m.grounding_rate) +
+    ' · 허위 인용 ' + (m.false_citations ? m.false_citations.length : '-') +
+    ' · 숫자 불일치 ' + (m.number_mismatch ? m.number_mismatch.length : '-') +
+    ' · 격리율 ' + r3(m.isolation) +
+    ' · 호출 ' + (m.calls !== undefined ? m.calls : '-') +
+    ' · 멈춘 이유: ' + (m.stop_reason || '-');
+  const secs = data.sections || {};
+  for (const line of (data.report || '').split('\n')) {
+    if (line.startsWith('## ')) {
+      const h = document.createElement('h3');
+      const t = line.slice(3).trim();
+      appendCited(h, t);
+      reportEl.appendChild(h);
+      if (t in secs) {
+        const det = document.createElement('details');
+        const sum = document.createElement('summary');
+        sum.textContent = '이 절을 쓴 조사관이 읽은 문서';
+        det.appendChild(sum);
+        const ul = document.createElement('ul');
+        for (const doc of secs[t].read || []) {
+          const li = document.createElement('li');
+          li.textContent = doc;
+          ul.appendChild(li);
+        }
+        det.appendChild(ul);
+        reportEl.appendChild(det);
+      }
+    } else if (line.startsWith('# ')) {
+      const h = document.createElement('h2');
+      appendCited(h, line.slice(2).trim());
+      reportEl.appendChild(h);
+    } else if (line.trim() === '---') {
+      reportEl.appendChild(document.createElement('hr'));
+    } else if (line.trim() !== '') {
+      const p = document.createElement('p');
+      appendCited(p, line);
+      reportEl.appendChild(p);
+    }
+  }
+}
+
+async function loadResult() {
+  try {
+    const res = await fetch('/result');
+    if (!res.ok) { addMsg('결과를 가져오지 못했습니다.', 'bot'); return; }
+    renderResult(await res.json());
+    addMsg('조사가 끝났습니다. 아래 보고서 패널을 보세요.', 'bot');
+  } catch (e) {
+    addMsg('결과 조회 실패', 'bot');
+  }
+}
+
+async function send() {
+  const q = document.getElementById('q');
+  const text = q.value.trim();
+  if (!text) return;
+  addMsg(text, 'user');
   q.value = '';
-};
+  steps.replaceChildren();
+  if (es) { es.close(); es = null; }
+  let res;
+  try {
+    res = await fetch('/run', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: text }) });
+  } catch (e) {
+    addMsg('서버에 연결할 수 없습니다.', 'bot');
+    return;
+  }
+  if (res.status === 409) { addMsg('이미 실행 중입니다. 끝나고 다시 물어보세요.', 'bot'); return; }
+  if (!res.ok) { addMsg('실행 시작 실패: ' + res.status, 'bot'); return; }
+  es = new EventSource('/events');
+  let finished = false;
+  es.onmessage = (ev) => addStep(ev.data);
+  es.addEventListener('done', async () => {
+    finished = true;
+    es.close(); es = null;
+    await loadResult();
+  });
+  es.onerror = () => { if (!finished) { es.close(); es = null; } };
+}
+document.getElementById('send').onclick = send;
+document.getElementById('q').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') send(); });
+
 const drop = document.getElementById('drop');
 ['dragover', 'dragenter'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
 drop.addEventListener('drop', async (ev) => {
   const fd = new FormData();
   for (const f of ev.dataTransfer.files) fd.append('files', f);
-  const res = await fetch('/upload/demo', { method: 'POST', body: fd });
-  const li = document.createElement('li');
-  li.textContent = '업로드: ' + JSON.stringify(await res.json());
-  msgs.appendChild(li);
+  try {
+    const res = await fetch('/upload/demo', { method: 'POST', body: fd });
+    addMsg('업로드: ' + JSON.stringify(await res.json()), 'bot');
+  } catch (e) {
+    addMsg('업로드 실패', 'bot');
+  }
 });
-document.getElementById('watch').onclick = () => {
-  const es = new EventSource('/events');
-  es.onmessage = (ev) => {
-    const li = document.createElement('li');
-    li.textContent = ev.data;
-    steps.appendChild(li);
-  };
-  es.onerror = () => es.close();
-};
 </script>
 </body>
 </html>

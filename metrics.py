@@ -14,7 +14,9 @@ def citations(text: str) -> list[str]:
 
 
 def sentences(text: str) -> list[str]:
-    """문장 분리: . ? ! 。 개행 기준, 빈 문자열 제거."""
+    """문장 분리: . ? ! 。 개행 기준, 빈 문자열 제거.
+    마침표 뒤에 붙은 인용은 앞 문장 것으로 본다 — 안 그러면 다음 문장에 붙어 근거율이 틀린다."""
+    text = re.sub(r"([.?!。])[ \t]*((?:«[^»]+»[ \t]*)+)", r" \2\1 ", text)
     return [s.strip() for s in SENT_SPLIT_RE.split(text) if s.strip()]
 
 
@@ -53,7 +55,9 @@ def number_mismatch(text: str, docs: dict[str, str]) -> list[tuple[str, str]]:
     bad: list[tuple[str, str]] = []
     for sent in sentences(text):
         cited = [m.group(1).strip() for m in CIT_RE.finditer(sent)]
-        for num in NUM_RE.findall(sent):
+        # 날짜·서수(2021년 10월 1일, 3번째, 3사)는 영어 원문과 표기가 달라 비교가 안 되므로 뺀다
+        for num in [m.group(0) for m in NUM_RE.finditer(sent)
+                    if not re.match(r"\s*(년|월|일|번째|위|사|개국|분기)", sent[m.end():])]:
             if not cited:
                 bad.append((sent, num))
                 continue

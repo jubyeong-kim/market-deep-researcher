@@ -3,7 +3,7 @@
 시장조사용 딥리서치 에이전트. 코디네이터가 질문을 보고 목차를 짜서 절마다 서브에이전트를 동시에 보내고,
 서브에이전트는 자기 절의 자료만 읽고 원고를 써서 올린다. 코디네이터는 원고를 다시 쓰지 않고 머리말·맺음말만 붙인다.
 
-> 상태: **걸어 다니는 뼈대** — 그래프 연결·병렬 파견·재위임 루프·종합은 동작하고, 노드 안은 가짜 데이터다.
+> 상태: 파이프라인 동작 (기획 → 병렬 조사 → 재위임 → 종합 → 지표). 실험·데모 다듬는 중.
 
 ## 흐름
 
@@ -46,3 +46,11 @@ LLM 백엔드는 `config.json` 의 `backend` 로 고른다.
 | `ablation.py` | 스위치를 하나씩 끄고 재는 실험 |
 | `baseline.py` | 혼자 하는 대조군 (같은 읽기 예산) |
 | `app.py`, `static/` | 웹 데모 |
+
+## 코퍼스
+
+`data/ev-battery/corpus.json` — 영어 위키백과 45건, 1,631,207자 (≈ 41만 토큰, Claude 창 200k 토큰의 2배).
+문서당 링크 중앙값 12, 링크 0개 문서 없음. 본문은 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (Wikipedia contributors).
+한국어 위키는 배터리 회사 문서가 1~3천 자로 짧아(LG에너지솔루션 1,024자) 영어로 바꿨다. 보고서는 한국어로 쓰고 인용만 영어 제목이다.
+
+재수집: `python collect.py build ev-battery "Electric vehicle" "Lithium-ion battery" ... --n 45`

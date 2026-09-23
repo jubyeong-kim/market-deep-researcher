@@ -23,16 +23,30 @@ def ask(system: str, user: str, coord: bool = False) -> str:
         r = OpenAI().chat.completions.create(
             model=model, messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
         return r.choices[0].message.content
+    if backend == "opencode":
+        # 개발용 무료 백엔드(느림, 호출당 ~40초). opencode 는 에이전트라 파일을 건드릴 수 있어 빈 임시 폴더에서 돌린다
+        import subprocess, tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            r = subprocess.run(["opencode", "run", "-m", model, f"{system}\n\n{user}"], cwd=tmp,
+                               capture_output=True, text=True, encoding="utf-8", timeout=300)
+        return r.stdout.strip()
     raise ValueError(f"unknown backend: {backend}")
 
 
 async def _ask_claude(system, user, model):
     # 구독 로그인(Claude Code)으로 돈다. system_prompt 를 직접 주면 기본 프롬프트(~2만 토큰)가 빠진다.
+    # tools=[] 로 내장 도구를 아예 끈다 (allowed_tools=[] 는 자동승인 목록일 뿐이라 모델이 도구를 부르면 1턴 제한에 걸림)
     from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage, TextBlock
     opts = ClaudeAgentOptions(model=model, system_prompt=system, max_turns=1,
-                              allowed_tools=[], setting_sources=[])
-    out = []
-    async for m in query(prompt=user, options=opts):
-        if isinstance(m, AssistantMessage):
-            out += [b.text for b in m.content if isinstance(b, TextBlock)]
-    return "".join(out)
+                              tools=[], allowed_tools=[], setting_sources=[])
+    for attempt in range(2):
+        out = []
+        try:
+            async for m in query(prompt=user, options=opts):
+                if isinstance(m, AssistantMessage):
+                    out += [b.text for b in m.content if isinstance(b, TextBlock)]
+            return "".join(out)
+        except Exception:
+            if attempt == 1:
+                raise
+    return ""

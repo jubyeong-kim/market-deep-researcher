@@ -1,13 +1,13 @@
 {
   "backend": "claude_sdk",
-  "model": {"claude_sdk": "claude-haiku-4-5", "openai": "gpt-4o-mini"},
-  "market": "demo",
+  "model": {"claude_sdk": "claude-haiku-4-5", "openai": "gpt-4o-mini", "opencode": "opencode/muse-spark-1.3-contributor-free"},
+  "market": "ev-battery",
 
   "max_sections": 6,
   "section_budget": 3,
   "max_rounds": 2,
 
-  "context_window_chars": 400000,
+  "context_window_chars": 800000,
   "min_docs": 30,
 
   "collect_parts": ["시장규모", "경쟁사", "규제", "가격", "소비자", "유통"],
