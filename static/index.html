@@ -29,6 +29,9 @@
   sup.cite { color: #36c; cursor: pointer; font-size: 0.75em; margin: 0 1px; }
   #metrics { font-size: 0.85em; color: #444; background: #f6f6f6; padding: 6px 8px; border-radius: 6px; margin-bottom: 8px; }
   details { margin: 4px 0 12px; font-size: 0.9em; }
+  #stages { font-size: 0.8em; color: #888; margin-bottom: 8px; }
+  #stages span { padding: 2px 6px; border-radius: 4px; }
+  #stages span.on { background: #36c; color: #fff; }
   @media (max-width: 700px) { .wrap { flex-direction: column; } .rep-flex { flex-direction: column; } }
 </style>
 </head>
@@ -36,6 +39,7 @@
 <div class="wrap">
   <div class="col">
     <h2>대화</h2>
+    <div id="stages"><span data-s="scope">1 시장 정하기</span> · <span data-s="upload">2 자료</span> · <span data-s="question">3 조사</span> <button id="reset" style="padding:2px 8px;font-size:1em">처음부터</button></div>
     <ul id="msgs"></ul>
     <div class="row">
       <input id="q" type="text" placeholder="질문을 입력하세요">
@@ -66,6 +70,35 @@ const metricsEl = document.getElementById('metrics');
 const excerptEl = document.getElementById('excerpt');
 const citeNo = {};  // 문서제목 -> 번호
 let es = null;
+let curStage = 'scope';
+let market = 'demo';
+
+function setStage(s) {
+  curStage = s;
+  document.querySelectorAll('#stages span').forEach(el => {
+    el.classList.toggle('on', el.dataset.s === s);
+  });
+}
+
+// 준비도 통계를 진행 패널에 표시
+function showStats(s) {
+  addStep('자료 점검: 문서 ' + s.doc_count + '건, ' + s.total_chars + '자, 링크 중앙값 ' + s.median_links);
+}
+
+async function init() {
+  try {
+    const res = await fetch('/state');
+    const st = await res.json();
+    setStage(st.stage);
+    market = st.market || 'demo';
+    if (st.stage === 'scope') addMsg('어떤 시장을 조사하고 싶으세요?', 'bot');
+    else addMsg('이어서 진행합니다. (' + st.stage + (st.scope ? ': ' + st.scope : '') + ')', 'bot');
+  } catch (e) {
+    setStage('scope');
+    addMsg('어떤 시장을 조사하고 싶으세요?', 'bot');
+  }
+}
+init();
 
 function addMsg(text, who) {
   const li = document.createElement('li');
@@ -73,7 +106,6 @@ function addMsg(text, who) {
   li.textContent = text;
   msgs.appendChild(li);
 }
-addMsg('어떤 시장을 조사하고 싶으세요?', 'bot');
 
 function addStep(text) {
   const li = document.createElement('li');
@@ -171,25 +203,9 @@ async function loadResult() {
   }
 }
 
-async function send() {
-  const q = document.getElementById('q');
-  const text = q.value.trim();
-  if (!text) return;
-  addMsg(text, 'user');
-  q.value = '';
+function watchEvents() {
   steps.replaceChildren();
   if (es) { es.close(); es = null; }
-  let res;
-  try {
-    res = await fetch('/run', { method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: text }) });
-  } catch (e) {
-    addMsg('서버에 연결할 수 없습니다.', 'bot');
-    return;
-  }
-  if (res.status === 409) { addMsg('이미 실행 중입니다. 끝나고 다시 물어보세요.', 'bot'); return; }
-  if (!res.ok) { addMsg('실행 시작 실패: ' + res.status, 'bot'); return; }
   es = new EventSource('/events');
   let finished = false;
   es.onmessage = (ev) => addStep(ev.data);
@@ -199,6 +215,28 @@ async function send() {
     await loadResult();
   });
   es.onerror = () => { if (!finished) { es.close(); es = null; } };
+}
+
+async function send(silentText) {
+  const q = document.getElementById('q');
+  const text = silentText || q.value.trim();
+  if (!text) return;
+  if (!silentText) { addMsg(text, 'user'); q.value = ''; }
+  let res;
+  try {
+    res = await fetch('/chat', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }) });
+  } catch (e) {
+    addMsg('서버에 연결할 수 없습니다.', 'bot');
+    return;
+  }
+  if (!res.ok) { addMsg('전송 실패: ' + res.status, 'bot'); return; }
+  const d = await res.json();
+  setStage(d.stage);
+  addMsg(d.reply, 'bot');
+  if (d.stats) showStats(d.stats);
+  if (d.run) watchEvents();
 }
 document.getElementById('send').onclick = send;
 document.getElementById('q').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') send(); });
@@ -210,12 +248,14 @@ drop.addEventListener('drop', async (ev) => {
   const fd = new FormData();
   for (const f of ev.dataTransfer.files) fd.append('files', f);
   try {
-    const res = await fetch('/upload/demo', { method: 'POST', body: fd });
+    const res = await fetch('/upload/' + encodeURIComponent(market), { method: 'POST', body: fd });
     addMsg('업로드: ' + JSON.stringify(await res.json()), 'bot');
+    if (curStage === 'upload') await send('다음');  // 조용히 준비도 확인 (사용자 말풍선 없음)
   } catch (e) {
     addMsg('업로드 실패', 'bot');
   }
 });
+document.getElementById('reset').onclick = async () => { await fetch('/reset', { method: 'POST' }); location.reload(); };
 </script>
 </body>
 </html>
