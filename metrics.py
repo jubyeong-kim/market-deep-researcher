@@ -17,6 +17,10 @@ def sentences(text: str) -> list[str]:
     """문장 분리: . ? ! 。 개행 기준, 빈 문자열 제거.
     마침표 뒤에 붙은 인용은 앞 문장 것으로 본다 — 안 그러면 다음 문장에 붙어 근거율이 틀린다."""
     text = re.sub(r"([.?!。])[ \t]*((?:«[^»]+»[ \t]*)+)", r" \2\1 ", text)
+    # 제목 줄(#)은 문장이 아니다 — 세면 절이 많은 쪽(팀)이 체계적으로 불리해진다 (Q3 읽다가 발견)
+    text = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("#"))
+    # 약어의 마침표에서 자르지 않는다 ("Solutions Inc." 에서 잘려 인용이 다음 조각으로 넘어감)
+    text = re.sub(r"\b(Inc|Co|Ltd|Corp|U\.S|St|No|vs)\.", lambda m: m.group(1).replace(".", "") + "", text)
     return [s.strip() for s in SENT_SPLIT_RE.split(text) if s.strip()]
 
 
