@@ -11,7 +11,7 @@
   .panel { max-width: 1000px; margin: 0 auto 16px; padding: 0 12px; }
   .panel .box { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
   #msgs { list-style: none; padding: 0; margin: 0 0 8px; max-height: 50vh; overflow-y: auto; }
-  #msgs li { margin: 4px 0; padding: 6px 8px; border-radius: 6px; word-break: break-all; }
+  #msgs li { margin: 4px 0; padding: 6px 8px; border-radius: 6px; word-break: break-all; white-space: pre-wrap; }
   #msgs li.bot { background: #eef3e6; }
   #msgs li.user { background: #f0f4ff; text-align: right; }
   #drop { border: 2px dashed #888; border-radius: 8px; padding: 20px; text-align: center; color: #555; margin-bottom: 8px; }
@@ -109,6 +109,7 @@ function addMsg(text, who) {
   li.className = who;
   li.textContent = text;
   msgs.appendChild(li);
+  msgs.scrollTop = msgs.scrollHeight;   // 새 말풍선이 아래에 숨지 않게 (목차 확인 답이 화면 밖에 있었음)
 }
 
 function addStep(text) {
@@ -265,7 +266,7 @@ async function send(silentText) {
   if (d.stats) showStats(d.stats);
   if (d.run) watchEvents();
 }
-document.getElementById('send').onclick = send;
+document.getElementById('send').onclick = () => send();   // onclick = send 로 두면 클릭 이벤트가 silentText 로 들어가 서버 500
 document.getElementById('q').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') send(); });
 
 const drop = document.getElementById('drop');
