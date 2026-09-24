@@ -72,6 +72,20 @@ m = graph.keep_better({"A": {"text": "x «D».", "read": ["a"], "raw": "r0", "in
                       {"A": {"text": "", "read": ["b"], "raw": "r1", "insufficient": True, "round": 1}})
 assert m["A"]["text"] == "x «D»." and "r0" in m["A"]["raw"] and "r1" in m["A"]["raw"]
 
+# 업로드 PDF: 쪽을 모아 DOC_CAP 이하 조각으로, 제목은 '파일명 p1-2' (마침표 없이)
+import pathlib, tempfile, pymupdf
+with tempfile.TemporaryDirectory() as tmp:
+    pdf = pymupdf.open()
+    for body in ["A" * 30, "B" * 30, "C" * 50]:
+        pdf.new_page().insert_text((72, 72), body)
+    pdf.save(pathlib.Path(tmp) / "rep.pdf")
+    pathlib.Path(tmp, "note.txt").write_text("짧은 메모", encoding="utf-8")
+    cap, graph.DOC_CAP = graph.DOC_CAP, 70
+    got = dict(graph.upload_chunks(tmp, ("t",)))
+    graph.DOC_CAP = cap
+assert list(got) == ["note", "rep p1-2", "rep p3"], list(got)   # 30+30 ≤ 70 이라 한 조각, 50 은 넘쳐서 다음 조각
+assert "A" * 30 in got["rep p1-2"] and "B" * 30 in got["rep p1-2"] and got["note"] == "짧은 메모"
+
 # 껐을 때: 표 없음, 카드 없음, 보고서 모양은 예전 그대로
 out = go(False)
 assert "비교표" not in out["report"] and all(x["card"] is None for x in out["drafts"].values())

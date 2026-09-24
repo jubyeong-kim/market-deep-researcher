@@ -18,6 +18,7 @@
     "redelegation": true,
     "links": true,
     "web_on_question": false,
-    "compare_table": false
+    "compare_table": false,
+    "uploads": false
   }
 }

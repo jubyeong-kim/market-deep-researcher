@@ -19,7 +19,7 @@ BASE = Path(__file__).parent
 def run_baseline(question: str, cfg: dict = None, budget: int = None, label: str = "baseline") -> dict:
     """단일 에이전트로 질문에 답하고 output/runs/<시각>_<라벨>/ 에 저장."""
     cfg = cfg or graph.CFG
-    corpus = graph.load_corpus(cfg["market"])
+    corpus = graph.load_corpus(cfg["market"], cfg["switches"]["uploads"])
     if budget is None:
         budget = cfg["max_sections"] * cfg["section_budget"]  # 팀이 읽을 수 있는 총량과 동일
     for k in llm.USAGE:
@@ -28,7 +28,7 @@ def run_baseline(question: str, cfg: dict = None, budget: int = None, label: str
     docs, links = corpus["docs"], corpus["links"]
     # 공정성: 팀 코디네이터와 같은 문서 카드를 보고, 먼저 읽을 문서 + 영어 검색어를 스스로 정한다.
     # (처음엔 한국어 질문으로만 골라 점수가 전부 0 → 코퍼스 앞쪽 24건을 순서대로 읽었다. Q3인데 LG Chem을 못 읽음)
-    cards = "\n".join(f"- {t}: {v[:graph.CARD_LEN].replace(chr(10), ' ')}" for t, v in docs.items())
+    cards = graph.doc_cards(corpus)
     sel = graph.parse_json(llm.ask(
         f"너는 시장조사 애널리스트다. 질문에 답하려고 문서를 최대 {budget}건 읽을 수 있다. "
         "아래 목록에서 먼저 읽을 문서(제목 그대로)와, 나머지 문서를 찾을 영어 검색어 5~8개를 정하라. "
@@ -37,7 +37,7 @@ def run_baseline(question: str, cfg: dict = None, budget: int = None, label: str
     first = [t for t in dict.fromkeys(sel.get("문서", [])) if t in docs][:budget]   # 지어낸 제목은 코드가 거른다
     read = first + graph.pick_docs({"title": question, "seed": None, "keywords": sel.get("검색어", [])},
                                    docs, links, avoid=set(first), already=[], budget=budget - len(first),
-                                   use_links=cfg["switches"]["links"])
+                                   use_links=cfg["switches"]["links"], full=set(corpus.get("uploads", ())))
     material = "\n\n".join(f"### «{t}»\n{docs[t][:graph.DOC_CAP]}" for t in read)
     # 글쓰기 규칙도 팀 조사관과 같게 (인용 위치 규칙이 다르면 근거율 비교가 틀어진다)
     system = ("너는 시장조사 애널리스트다. 아래 자료만으로 질문에 답하는 긴 보고서를 혼자 통째로 써라. "

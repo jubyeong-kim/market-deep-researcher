@@ -1,4 +1,5 @@
 """FastAPI 앱. 실행: uvicorn app:app --reload"""
+import copy
 import os
 import queue
 import re
@@ -14,6 +15,9 @@ import llm
 
 BASE = Path(__file__).parent
 app = FastAPI()
+# 데모는 사용자가 올린 자료를 조사에 쓴다 (config 의 uploads 는 실험용 기본값 끔 — 2차 실험과 같은 조건)
+DEMO_CFG = copy.deepcopy(graph.CFG)
+DEMO_CFG["switches"]["uploads"] = True
 
 _state = {"running": False, "done": False, "queue": None, "result": None,
            "question": "", "removed": []}
@@ -32,7 +36,7 @@ def _push(line: str) -> None:
 
 def _run_target(question: str, approved_plan=None, label: str = "base", axes=None) -> None:
     try:
-        res = graph.run(question, label=label, on_log=_push, approved_plan=approved_plan, approved_axes=axes)
+        res = graph.run(question, DEMO_CFG, label=label, on_log=_push, approved_plan=approved_plan, approved_axes=axes)
         with _lock:
             _state["result"] = {k: v for k, v in res.items() if k != "corpus"}
     except Exception as e:
@@ -135,7 +139,7 @@ def result():
 @app.get("/doc/{title}")
 def doc(title: str):
     """코퍼스 문서 앞 1500자 (없으면 404)."""
-    docs = graph.load_corpus(graph.CFG["market"])["docs"]
+    docs = graph.load_corpus(graph.CFG["market"], uploads=True)["docs"]
     if title not in docs:
         raise HTTPException(404, "문서 없음")
     return {"title": title, "excerpt": docs[title][:1500]}
@@ -191,9 +195,10 @@ def _toc_reply(plan: list, alarms: list) -> str:
 @app.post("/chat")
 def chat(body: dict):
     """단계별 대화: scope(시장 정하기) → upload(자료) → question(질문) → toc(목차 확인)."""
-    text = ((body or {}).get("text") or "").strip()
-    if not text:
-        raise HTTPException(400, "text가 비어 있음")
+    text = (body or {}).get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise HTTPException(400, "text는 비어 있지 않은 문자열이어야 함")
+    text = text.strip()
     stage = _session["stage"]
 
     if stage == "scope":  # 1. 시장 좁히기 (매 턴 LLM 후속 질문 1개, 정리: 면 2단계로)
@@ -245,7 +250,7 @@ def chat(body: dict):
     # 3. 목차 확인 (동기 propose_plan; sync 엔드포인트는 FastAPI 스레드풀에서 돈다)
     if stage == "question":
         try:
-            prop = graph.propose_plan(text)
+            prop = graph.propose_plan(text, DEMO_CFG)
         except Exception as e:
             return {"stage": "question",
                     "reply": f"목차를 짜는 데 실패했습니다 ({type(e).__name__}). 다시 질문해 주세요."}
@@ -260,7 +265,7 @@ def chat(body: dict):
     t = text.strip()
     if t == "다시" or not plan:
         try:
-            prop = graph.propose_plan(_session["pending_q"] or text)
+            prop = graph.propose_plan(_session["pending_q"] or text, DEMO_CFG)
         except Exception as e:
             return {"stage": "toc",
                     "reply": f"목차를 짜는 데 실패했습니다 ({type(e).__name__}). '다시'라고 입력해 주세요."}

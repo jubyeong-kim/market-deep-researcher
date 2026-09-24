@@ -4,6 +4,7 @@
 설정은 config.json. 실험(ablation)은 run(question, cfg) 에 스위치를 바꾼 cfg 를 넘긴다.
 """
 import copy
+import functools
 import json
 import operator
 import re
@@ -15,6 +16,7 @@ from typing import Annotated, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import Send
 
+import collect
 import llm
 import metrics
 
@@ -24,8 +26,38 @@ DOC_CAP = 6000      # 문서 한 건에서 서브에이전트가 읽는 최대 �
 CARD_LEN = 150      # 코디네이터가 보는 문서 카드 길이
 
 
-def load_corpus(market):
-    return json.load(open(BASE / "data" / market / "corpus.json", encoding="utf-8"))
+def load_corpus(market, uploads=False):
+    """코퍼스(위키). uploads=True 면 data/<market>/uploads 의 자료를 쪽 단위 조각으로 더한다 (파일은 안 바꿈).
+    실험은 스위치 uploads 기본 끔 → 2차 실험 54회와 같은 문서 45건."""
+    corpus = json.load(open(BASE / "data" / market / "corpus.json", encoding="utf-8"))
+    if uploads:
+        folder = BASE / "data" / market / "uploads"
+        stamp = tuple((f.name, f.stat().st_mtime) for f in sorted(folder.iterdir())) if folder.is_dir() else ()
+        chunks = dict(upload_chunks(str(folder), stamp))
+        corpus["docs"].update(chunks)
+        corpus["links"].update({t: [] for t in chunks})
+        corpus["uploads"] = sorted(chunks)   # 조각 제목들 — 기획 카드와 문서 고르기에서 위키와 다르게 다룬다
+    return corpus
+
+
+@functools.lru_cache(maxsize=1)   # 폴더가 그대로면 다시 안 읽는다 (데모에서 인용을 누를 때마다 PDF를 읽으면 느림)
+def upload_chunks(folder: str, stamp: tuple) -> tuple:
+    """업로드 PDF를 쪽을 모아 DOC_CAP 이하 조각으로 자른다. 통째로 두면 조사관은 앞 6천 자(표지·목차)만 읽는다.
+    조각 제목 '파일명 p98-99' — 'p.98' 처럼 마침표를 쓰면 문장 분리에서 인용이 두 동강 난다.
+    ponytail: txt·md 는 쪽이 없어 통째로 한 문서 (길면 앞 DOC_CAP 자만 읽힘). 긴 텍스트를 올리게 되면 글자 수로 자를 것"""
+    out = []
+    for title, text in collect.load_uploads(folder).items():
+        pages = text.split("\f")
+        if len(pages) == 1:
+            out.append((title, text))
+            continue
+        start, buf = 1, ""
+        for i, page in enumerate(pages + [None], 1):
+            if buf and (page is None or len(buf) + len(page) > DOC_CAP):
+                out.append((f"{title} p{start}" + (f"-{i - 1}" if i - 1 > start else ""), buf))
+                start, buf = i, ""
+            buf += page or ""
+    return tuple(out)
 
 
 def n_citations(text: str) -> int:
@@ -73,13 +105,26 @@ def parse_json(text: str):
         return {}
 
 
+def doc_cards(corpus: dict) -> str:
+    """코디네이터(와 대조군)가 보는 문서 카드: 제목 + 앞 CARD_LEN자.
+    업로드 조각(쪽 묶음 230개)은 다 보여 주지 않는다 — 데모 첫 실행에서 코디네이터 글자가 6배, 격리율 0.39.
+    파일마다 한 줄만 알리고, 조각은 절의 영어 검색어로 pick_docs 가 찾는다. 업로드가 없으면 예전 카드와 글자 하나 다르지 않다"""
+    up = set(corpus.get("uploads", []))
+    cards = "\n".join(f"- {t}: {v[:CARD_LEN].replace(chr(10), ' ')}" for t, v in corpus["docs"].items() if t not in up)
+    files = sorted({re.sub(r" p\d+(-\d+)?$", "", t) for t in up})
+    # 검색어는 통째로 일치해야 점수가 난다 → 긴 구절("LG Energy Solution battery chemistry")이면 조각을 못 찾는다 (데모 둘째 실행)
+    return cards + "".join(f"\n- [업로드 자료] {f}: 쪽 묶음 {sum(t.startswith(f + ' p') for t in up)}개. "
+                           "시작문서로 쓰지 말고, 절마다 검색어에 대상 이름을 원문 표기 그대로 짧게(예: 'SK On') 넣어 찾게 하라"
+                           for f in files)
+
+
 # ① 기획 — 코디네이터는 문서 카드(앞 CARD_LEN자)만 보고 목차·역할·시작자료·예산을 정한다
 def plan(s: State):
     if s.get("plan"):   # 데모에서 사람이 확인·수정한 목차를 넘긴 경우 — 다시 짜지 않는다
         return {"round": 0, "log": [f"기획: 사람이 확정한 목차 {len(s['plan'])}개 — " +
                                     ", ".join(p["title"] for p in s["plan"])]}
     cfg, docs = s["cfg"], s["corpus"]["docs"]
-    cards = "\n".join(f"- {t}: {v[:CARD_LEN].replace(chr(10), ' ')}" for t, v in docs.items())
+    cards = doc_cards(s["corpus"])
     system = ("너는 시장조사 팀의 코디네이터다. 질문에 답할 보고서 목차를 짜라. "
               f"절은 최대 {cfg['max_sections']}개지만 질문이 실제로 나뉘는 만큼만 나눠라 — 칸을 채우려고 절을 만들지 마라. "
               "목차는 형식(개요·분석·전망)이 아니라 조사 대상(회사·세그먼트·채널·기술 등) 단위로 나눠라. "
@@ -125,7 +170,7 @@ def dispatch(s: State):
             already = s["drafts"].get(p["title"], {}).get("read", [])
             own_seed = {p["seed"]} if p["seed"] and p["seed"] not in already else set()
             picks[p["title"]] = pick_docs(p, corpus["docs"], corpus["links"], taken - own_seed, already,
-                                          p["budget"], s["cfg"]["switches"]["links"])
+                                          p["budget"], s["cfg"]["switches"]["links"], set(corpus.get("uploads", ())))
             taken |= set(picks[p["title"]])
     return [Send("research", {
         "picks": picks.get(p["title"]),
@@ -137,12 +182,14 @@ def dispatch(s: State):
     }) for p in todo]
 
 
-def pick_docs(sec, docs, links, avoid, already, budget, use_links):
+def pick_docs(sec, docs, links, avoid, already, budget, use_links, full=frozenset()):
     """다음에 읽을 문서를 코드가 고른다: 시작문서 → 읽은 문서의 링크 → 절 제목 단어가 겹치는 문서.
     ponytail: LLM에게 고르게 하면 절마다 호출이 예산만큼 늘어난다. 링크+단어 겹침으로 대신함. 품질 부족하면 LLM 선택으로 교체."""
     # 절 제목은 한국어, 문서는 영어 → 코디네이터가 준 영어 검색어로 점수를 매긴다
     words = [w.lower() for w in re.split(r"\W+", sec["title"]) + sec.get("keywords", []) if len(w) >= 2]
-    score = lambda t: sum(w in t.lower() or w in docs[t][:2000].lower() for w in words)
+    # 위키는 첫머리 2천 자(요약 문단)로, 업로드 조각(full)은 조각 전체로 — 조각엔 요약 문단이 없고, 회사 이름이 둘째 쪽에 있으면
+    # 앞 2천 자만 봐서 0점이었다 (데모 첫 실행: 3사가 다 나오는 GEVO p97-100 을 아무 절도 안 읽음)
+    score = lambda t: sum(w in t.lower() or w in (docs[t] if t in full else docs[t][:2000]).lower() for w in words)
     chosen = [sec["seed"]] if sec["seed"] and sec["seed"] not in already else []
     while len(chosen) < budget:
         seen = set(already) | set(chosen)
@@ -163,7 +210,8 @@ def research(task: dict):
     avoid = ({seed for _, seed in task["others"] if seed} | set(task["others_read"])) \
         if cfg["switches"]["zones"] else set()
     read = task["picks"] if task["picks"] is not None else \
-        pick_docs(sec, docs, corpus["links"], avoid, task["already"], sec["budget"], cfg["switches"]["links"])
+        pick_docs(sec, docs, corpus["links"], avoid, task["already"], sec["budget"], cfg["switches"]["links"],
+                  set(corpus.get("uploads", ())))
     material = "\n\n".join(f"### «{t}»\n{docs[t][:DOC_CAP]}" for t in read)
     zones = "; ".join(t for t, _ in task["others"]) if cfg["switches"]["zones"] else "(알려주지 않음)"
     system = (f"너는 시장조사 팀의 {sec['role']}다. 보고서의 '{sec['title']}' 절 하나만 쓴다. "
@@ -298,7 +346,7 @@ def propose_plan(question: str, cfg: dict = None) -> dict:
     cfg = cfg or CFG
     for k in llm.USAGE:
         llm.USAGE[k] = 0
-    return plan({"question": question, "cfg": cfg, "corpus": load_corpus(cfg["market"])})
+    return plan({"question": question, "cfg": cfg, "corpus": load_corpus(cfg["market"], cfg["switches"]["uploads"])})
 
 
 def run(question: str, cfg: dict = None, label: str = "base", on_log=print, approved_plan: list = None,
@@ -306,7 +354,7 @@ def run(question: str, cfg: dict = None, label: str = "base", on_log=print, appr
     """한 번 돌리고 output/runs/<시각>_<라벨>/ 에 목차·원고·읽은 기록·보고서·지표를 남긴다.
     approved_plan · approved_axes: 데모에서 사람이 확인한 목차와 그때 함께 나온 비교축 (기획을 건너뛴다)"""
     cfg = cfg or CFG
-    corpus = load_corpus(cfg["market"])
+    corpus = load_corpus(cfg["market"], cfg["switches"]["uploads"])
     if not approved_plan:            # 목차를 propose_plan 으로 미리 뽑았다면 그 글자 수를 이어서 센다
         for k in llm.USAGE:
             llm.USAGE[k] = 0

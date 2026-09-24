@@ -61,9 +61,10 @@ def load_uploads(folder: str) -> dict[str, str]:
         path = os.path.join(folder, fn)
         try:
             if ext == ".pdf":
-                from pypdf import PdfReader
-                reader = PdfReader(path)
-                docs[title] = "\n".join((p.extract_text() or "") for p in reader.pages)
+                # pymupdf: pypdf 보다 15배 빠름 (IEA 295쪽 34초 → 2초). 쪽 경계는 \f 로 남긴다 → graph 가 쪽 단위로 자름
+                import pymupdf
+                with pymupdf.open(path) as pdf:
+                    docs[title] = "\f".join(p.get_text() for p in pdf)
             else:
                 try:
                     with open(path, encoding="utf-8") as f:

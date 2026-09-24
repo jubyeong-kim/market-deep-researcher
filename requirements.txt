@@ -4,4 +4,4 @@ fastapi
 uvicorn
 python-multipart
 openai
-pypdf
+pymupdf
