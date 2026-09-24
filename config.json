@@ -17,6 +17,7 @@
     "zones": true,
     "redelegation": true,
     "links": true,
-    "web_on_question": false
+    "web_on_question": false,
+    "compare_table": false
   }
 }

@@ -6,6 +6,26 @@ CIT_RE = re.compile(r"«([^»]+)»")
 NUM_RE = re.compile(r"\d+(?:,\d+)*(?:\.\d+)?%?")
 # 문장 분리: ? ! 。 개행은 항상, 마침표는 숫자 사이 소수점(3.2)이 아닐 때만
 SENT_SPLIT_RE = re.compile(r"[?!。\n]+|(?<!\d)\.|\.(?!\d)")
+TABLE_SEP_RE = re.compile(r"^\|[\s:|-]*-[\s:|-]*$")        # |---|---|
+NO_DATA_RE = re.compile(r"^\(?(자료|카드) 없음\)?\.?$")
+
+
+def _lines(text: str):
+    """제목 줄(#)은 빼고, 표 행은 칸마다 한 줄로 편다.
+    비교표 칸 하나 = 조사관 카드 한 줄 = 주장 하나. 행째 한 문장으로 세면 머리 행·구분선이 '근거 없는 문장'이 되고
+    칸이 마침표마다 제멋대로 잘린다 (가짜 표로 재 보니 인용 3/3인 표가 근거율 0.43).
+    빼는 것: 머리 행(열 이름 = 절 제목) · 구분선 · 첫 칸(축 이름) · '자료 없음'/'(카드 없음)' 칸 (주장이 아니라 빈칸 표시)."""
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if s.startswith("#") or TABLE_SEP_RE.match(s):
+            continue
+        if s.startswith("|"):
+            if i + 1 < len(lines) and TABLE_SEP_RE.match(lines[i + 1].strip()):
+                continue
+            yield from (c for c in s.strip("|").split("|")[1:] if not NO_DATA_RE.match(c.strip()))
+            continue
+        yield line
 
 
 def citations(text: str) -> list[str]:
@@ -17,8 +37,8 @@ def sentences(text: str) -> list[str]:
     """문장 분리: . ? ! 。 개행 기준, 빈 문자열 제거.
     마침표 뒤에 붙은 인용은 앞 문장 것으로 본다 — 안 그러면 다음 문장에 붙어 근거율이 틀린다."""
     text = re.sub(r"([.?!。])[ \t]*((?:«[^»]+»[ \t]*)+)", r" \2\1 ", text)
-    # 제목 줄(#)은 문장이 아니다 — 세면 절이 많은 쪽(팀)이 체계적으로 불리해진다 (Q3 읽다가 발견)
-    text = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("#"))
+    # 제목 줄(#)은 문장이 아니다 — 세면 절이 많은 쪽(팀)이 체계적으로 불리해진다 (Q3 읽다가 발견). 표는 칸 단위로
+    text = "\n".join(_lines(text))
     # 약어의 마침표에서 자르지 않는다 ("Solutions Inc." 에서 잘려 인용이 다음 조각으로 넘어감)
     text = re.sub(r"\b(Inc|Co|Ltd|Corp|U\.S|St|No|vs)\.", lambda m: m.group(1).replace(".", "") + "", text)
     return [s.strip() for s in SENT_SPLIT_RE.split(text) if s.strip()]
@@ -94,6 +114,9 @@ if __name__ == "__main__":
     # sentences: 구분자 분리, 빈 문자열 제거
     assert sentences("첫째. 둘째? 셋째! 넷째。다섯째\n여섯째") == ["첫째", "둘째", "셋째", "넷째", "다섯째", "여섯째"]
     assert sentences("") == []
+    # 표: 칸 하나 = 문장 하나. 머리 행·구분선·축 이름·빈칸 표시는 세지 않는다
+    t = "| 축 | A | B |\n|---|---|---|\n| 위치 | 2위 «X». | 자료 없음 |\n| 기술 | (카드 없음) | 전고체 «Y» |"
+    assert sentences(t) == ["2위 «X»", "전고체 «Y»"] and grounding_rate(t) == 1.0
     # grounding_rate: 인용 문장 비율
     assert grounding_rate("인용 있음«A». 인용 없음.") == 0.5
     assert grounding_rate("") == 0.0

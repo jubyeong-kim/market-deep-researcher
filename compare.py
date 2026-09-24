@@ -1,6 +1,6 @@
 """나란히 읽기 시트: 한 질문의 설정별 보고서를 비교한다.
-실행: python compare.py --question-substr "CATL" [--repeat-index 0] [--runs-file output/runs.jsonl]
-출력: output/compare/<질문 앞 20자>__r<idx>.md
+실행: python compare.py --question-substr "CATL" [--repeat-index 0] [--runs-file output/runs.jsonl] [--labels base baseline]
+출력: output/compare/<질문 앞 20자>__r<idx>[__라벨들].md
 """
 import argparse
 import json
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).parent
-LABELS = ["base", "no_assignment", "no_zones", "no_redelegation", "no_links", "baseline"]
+LABELS = ["base", "no_assignment", "no_zones", "no_redelegation", "no_links", "compare_table", "baseline"]
 
 
 def load_rows(runs_file: str) -> list:
@@ -26,8 +26,8 @@ def load_rows(runs_file: str) -> list:
     return rows
 
 
-def pick(substr: str, idx: int, rows: list) -> tuple:
-    """해당 질문의 라벨별 idx번째 실행 (dir 시간순). 없는 라벨은 건너뜀."""
+def pick(substr: str, idx: int, rows: list, labels: list = LABELS) -> tuple:
+    """해당 질문의 라벨별 idx번째 실행 (dir 시간순, 음수면 뒤에서 — -1 = 가장 최근). 없는 라벨은 건너뜀."""
     match = [r for r in rows if substr in r.get("question", "")]
     if not match:
         print(f"질문 없음: '{substr}' 포함 실행이 {len(rows)}건 중 0건")
@@ -35,10 +35,10 @@ def pick(substr: str, idx: int, rows: list) -> tuple:
     question = match[0]["question"]
     same_q = [r for r in match if r["question"] == question]
     picked = {}
-    for lab in LABELS:
+    for lab in labels:
         runs = sorted((r for r in same_q if r.get("label") == lab),
                       key=lambda r: r.get("dir", ""))
-        if len(runs) > idx:
+        if -len(runs) <= idx < len(runs):
             picked[lab] = runs[idx]
         else:
             print(f"건너뜀: {lab} (실행 {len(runs)}건, idx {idx} 없음)")
@@ -157,13 +157,15 @@ def main() -> None:
     ap.add_argument("--question-substr", required=True)
     ap.add_argument("--repeat-index", type=int, default=0)
     ap.add_argument("--runs-file", default=str(BASE / "output" / "runs.jsonl"))
+    ap.add_argument("--labels", nargs="+", default=LABELS, choices=LABELS)
     a = ap.parse_args()
     rows = load_rows(a.runs_file)
-    question, picked = pick(a.question_substr, a.repeat_index, rows)
+    question, picked = pick(a.question_substr, a.repeat_index, rows, a.labels)
     data = {lab: read_run(BASE / "output" / "runs" / r["dir"]) for lab, r in picked.items()}
 
     safe = re.sub(r"[^0-9A-Za-z가-힣]+", "_", question[:20]).strip("_") or "q"
-    out_path = BASE / "output" / "compare" / f"{safe}__r{a.repeat_index}.md"
+    tag = "" if a.labels == LABELS else "__" + "-".join(a.labels)     # 라벨을 골랐으면 기존 시트를 덮지 않게
+    out_path = BASE / "output" / "compare" / f"{safe}__r{a.repeat_index}{tag}.md"
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     L = [f"# {question}", "",
