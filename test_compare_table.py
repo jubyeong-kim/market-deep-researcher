@@ -59,6 +59,14 @@ assert "비교 요약에 표에 없는 인용: ['Tesla, Inc.']" in out["alarms"]
 table = rep[rep.index("## 비교표"):rep.index("## 비교 요약")]
 assert metrics.sentences(table) == ["세계 2위다 «LG Chem»", "5위권이다 «SK Innovation»", "전고체를 연구한다 «SK Innovation»"]
 
+# 데모 경로: 사람이 확인한 목차 + 그때 나온 비교축을 넘기면 기획을 건너뛰고도 표가 나온다
+cfg = copy.deepcopy(graph.CFG)
+cfg["switches"]["compare_table"] = True
+out = graph.build().invoke({"question": "3사 전략 차이?", "cfg": cfg, "corpus": graph.load_corpus(cfg["market"]),
+                            "drafts": {}, "alarms": [], "axes": ["시장 위치(점유율 순위)", "차세대 기술"],
+                            "plan": [{"title": t, "role": "조사관", "seed": None, "budget": 1} for t in ("LG", "SK")]})
+assert "| 시장 위치(점유율 순위) | 세계 2위다 «LG Chem». | 5위권이다 «SK Innovation». |" in out["report"]
+
 # 재위임: 채택 안 된 두 번째 원고도 원본 응답은 남는다 (0바퀴 빈 원고 추적용)
 m = graph.keep_better({"A": {"text": "x «D».", "read": ["a"], "raw": "r0", "insufficient": True}},
                       {"A": {"text": "", "read": ["b"], "raw": "r1", "insufficient": True, "round": 1}})

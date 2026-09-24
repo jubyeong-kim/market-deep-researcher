@@ -32,6 +32,10 @@
   #stages { font-size: 0.8em; color: #888; margin-bottom: 8px; }
   #stages span { padding: 2px 6px; border-radius: 4px; }
   #stages span.on { background: #36c; color: #fff; }
+  table.cmp { border-collapse: collapse; font-size: 0.85em; margin: 8px 0; display: block; overflow-x: auto; }
+  table.cmp th, table.cmp td { border: 1px solid #ddd; padding: 4px 6px; vertical-align: top; text-align: left; }
+  table.cmp th { background: #f3f3f3; }
+  table.cmp tr > :first-child { min-width: 6em; }
   @media (max-width: 700px) { .wrap { flex-direction: column; } .rep-flex { flex-direction: column; } }
 </style>
 </head>
@@ -165,8 +169,24 @@ function renderResult(data) {
     reportEl.appendChild(p);
   }
   const secs = data.sections || {};
+  let table = null;   // 비교표: '|' 로 시작하는 줄이 이어지는 동안 한 표. 첫 줄은 열 이름
   for (const line of (data.report || '').split('\n')) {
-    if (line.startsWith('## ')) {
+    if (!line.startsWith('|')) table = null;
+    if (line.startsWith('|')) {
+      if (/^\|[\s:|-]*-[\s:|-]*$/.test(line.trim())) continue;   // |---|---| 구분선
+      const head = !table;
+      if (head) {
+        table = document.createElement('table');
+        table.className = 'cmp';
+        reportEl.appendChild(table);
+      }
+      const tr = table.insertRow();
+      for (const c of line.trim().replace(/^\||\|$/g, '').split('|')) {
+        const td = document.createElement(head ? 'th' : 'td');
+        appendCited(td, c.trim());   // 칸 안의 «인용» 도 [1] 로 숨기고 누르면 원문
+        tr.appendChild(td);
+      }
+    } else if (line.startsWith('## ')) {
       const h = document.createElement('h3');
       const t = line.slice(3).trim();
       appendCited(h, t);

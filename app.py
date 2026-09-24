@@ -21,7 +21,7 @@ _lock = threading.Lock()
 
 # 단계별 대화 세션 (1인용, 인메모리): scope → upload → question → toc(목차 확인)
 _session = {"stage": "scope", "scope": "", "turns": 0, "history": [], "pending_choice": False,
-            "pending_q": "", "pending_plan": [], "removed": []}
+            "pending_q": "", "pending_plan": [], "pending_axes": [], "removed": []}
 
 
 def _push(line: str) -> None:
@@ -30,9 +30,9 @@ def _push(line: str) -> None:
         q.put(str(line).replace("\r", "").replace("\n", " "))
 
 
-def _run_target(question: str, approved_plan=None, label: str = "base") -> None:
+def _run_target(question: str, approved_plan=None, label: str = "base", axes=None) -> None:
     try:
-        res = graph.run(question, label=label, on_log=_push, approved_plan=approved_plan)
+        res = graph.run(question, label=label, on_log=_push, approved_plan=approved_plan, approved_axes=axes)
         with _lock:
             _state["result"] = {k: v for k, v in res.items() if k != "corpus"}
     except Exception as e:
@@ -65,14 +65,14 @@ async def upload(market: str, files: list[UploadFile]):
     return {"saved": saved}
 
 
-def _start_run(question: str, approved_plan=None, label: str = "base", removed=None) -> bool:
+def _start_run(question: str, approved_plan=None, label: str = "base", removed=None, axes=None) -> bool:
     """백그라운드 실행 시작. 이미 실행 중이면 False."""
     with _lock:
         if _state["running"]:
             return False
         _state.update(running=True, done=False, queue=queue.Queue(), question=question,
                       removed=list(removed or []))
-    threading.Thread(target=_run_target, args=(question, approved_plan, label),
+    threading.Thread(target=_run_target, args=(question, approved_plan, label, axes),
                      daemon=True).start()
     return True
 
@@ -173,7 +173,7 @@ def state():
 def reset():
     """대화를 처음(시장 정하기)부터 다시."""
     _session.update(stage="scope", scope="", turns=0, history=[], pending_choice=False,
-                    pending_q="", pending_plan=[], removed=[])
+                    pending_q="", pending_plan=[], pending_axes=[], removed=[])
     return state()
 
 
@@ -181,6 +181,8 @@ def _toc_reply(plan: list, alarms: list) -> str:
     """번호 매긴 목차 + 알람 + 확정 안내."""
     lines = [f"{i}. {p.get('title', '?')} — {p.get('role', '')} "
              f"(시작 문서: {p.get('seed') or '없음'})" for i, p in enumerate(plan, 1)]
+    if _session["pending_axes"]:   # compare_table 켰을 때만 나온다
+        lines.append("비교축: " + " · ".join(_session["pending_axes"]))
     lines += [f"! {a}" for a in (alarms or [])]
     lines.append("이대로 조사할까요? '예' / '빼기 2 4' (번호 빼기) / '다시' (목차 다시 짜기)")
     return "\n".join(lines)
@@ -247,7 +249,7 @@ def chat(body: dict):
         except Exception as e:
             return {"stage": "question",
                     "reply": f"목차를 짜는 데 실패했습니다 ({type(e).__name__}). 다시 질문해 주세요."}
-        _session.update(pending_q=text, pending_plan=prop.get("plan", []),
+        _session.update(pending_q=text, pending_plan=prop.get("plan", []), pending_axes=prop.get("axes", []),
                         removed=[], stage="toc")
         return {"stage": "toc",
                 "reply": "조사하기 전에 목차를 확인하세요.\n"
@@ -262,12 +264,12 @@ def chat(body: dict):
         except Exception as e:
             return {"stage": "toc",
                     "reply": f"목차를 짜는 데 실패했습니다 ({type(e).__name__}). '다시'라고 입력해 주세요."}
-        _session.update(pending_plan=prop.get("plan", []), removed=[])
+        _session.update(pending_plan=prop.get("plan", []), pending_axes=prop.get("axes", []), removed=[])
         return {"stage": "toc", "reply": _toc_reply(_session["pending_plan"],
                                                     prop.get("alarms", []))}
     if t.lower() in ("예", "네", "ok"):
         if not _start_run(_session["pending_q"], approved_plan=plan, label="demo",
-                          removed=_session["removed"]):
+                          removed=_session["removed"], axes=_session["pending_axes"]):
             return {"stage": "toc", "reply": "이미 실행 중입니다. 끝나고 다시 답해 주세요."}
         _session["stage"] = "question"
         return {"stage": "question", "reply": "조사를 시작합니다.", "run": True}

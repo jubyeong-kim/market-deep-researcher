@@ -301,8 +301,10 @@ def propose_plan(question: str, cfg: dict = None) -> dict:
     return plan({"question": question, "cfg": cfg, "corpus": load_corpus(cfg["market"])})
 
 
-def run(question: str, cfg: dict = None, label: str = "base", on_log=print, approved_plan: list = None) -> dict:
-    """한 번 돌리고 output/runs/<시각>_<라벨>/ 에 목차·원고·읽은 기록·보고서·지표를 남긴다."""
+def run(question: str, cfg: dict = None, label: str = "base", on_log=print, approved_plan: list = None,
+        approved_axes: list = None) -> dict:
+    """한 번 돌리고 output/runs/<시각>_<라벨>/ 에 목차·원고·읽은 기록·보고서·지표를 남긴다.
+    approved_plan · approved_axes: 데모에서 사람이 확인한 목차와 그때 함께 나온 비교축 (기획을 건너뛴다)"""
     cfg = cfg or CFG
     corpus = load_corpus(cfg["market"])
     if not approved_plan:            # 목차를 propose_plan 으로 미리 뽑았다면 그 글자 수를 이어서 센다
@@ -312,7 +314,7 @@ def run(question: str, cfg: dict = None, label: str = "base", on_log=print, appr
     out, n = {}, 0
     init = {"question": question, "cfg": cfg, "corpus": corpus, "drafts": {}, "alarms": []}
     if approved_plan:
-        init["plan"] = approved_plan
+        init["plan"], init["axes"] = approved_plan, approved_axes or []
     for out in build().stream(init, stream_mode="values"):
         for line in out.get("log", [])[n:]:
             on_log(line)                      # 웹 화면 진행 패널로 흘려보낼 자리

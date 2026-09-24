@@ -40,7 +40,9 @@ def sentences(text: str) -> list[str]:
     # 제목 줄(#)은 문장이 아니다 — 세면 절이 많은 쪽(팀)이 체계적으로 불리해진다 (Q3 읽다가 발견). 표는 칸 단위로
     text = "\n".join(_lines(text))
     # 약어의 마침표에서 자르지 않는다 ("Solutions Inc." 에서 잘려 인용이 다음 조각으로 넘어감)
-    text = re.sub(r"\b(Inc|Co|Ltd|Corp|U\.S|St|No|vs)\.", lambda m: m.group(1).replace(".", "") + "", text)
+    # 점 찍은 대문자 약어(U.S. B.V.)도 — Q7 읽기 노트 준비 중 "BYD Europe B.V.를" 이 세 조각으로 잘린 걸 발견
+    text = re.sub(r"\b(?:[A-Z]\.){2,}", lambda m: m.group(0).replace(".", ""), text)
+    text = re.sub(r"\b(Inc|Co|Ltd|Corp|St|No|vs)\.", r"\1", text)
     return [s.strip() for s in SENT_SPLIT_RE.split(text) if s.strip()]
 
 
@@ -114,6 +116,10 @@ if __name__ == "__main__":
     # sentences: 구분자 분리, 빈 문자열 제거
     assert sentences("첫째. 둘째? 셋째! 넷째。다섯째\n여섯째") == ["첫째", "둘째", "셋째", "넷째", "다섯째", "여섯째"]
     assert sentences("") == []
+    # 약어: 마침표에서 자르지 않는다
+    assert sentences("BYD Europe B.V.를 세웠다 «X». LG Energy Solution Inc. 가 있다 «Y». 다음") == \
+        ["BYD Europe BV를 세웠다 «X»", "LG Energy Solution Inc 가 있다 «Y»", "다음"]
+    assert sentences("U.S. 공장이다 «X».") == ["US 공장이다 «X»"]
     # 표: 칸 하나 = 문장 하나. 머리 행·구분선·축 이름·빈칸 표시는 세지 않는다
     t = "| 축 | A | B |\n|---|---|---|\n| 위치 | 2위 «X». | 자료 없음 |\n| 기술 | (카드 없음) | 전고체 «Y» |"
     assert sentences(t) == ["2위 «X»", "전고체 «Y»"] and grounding_rate(t) == 1.0

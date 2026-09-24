@@ -26,7 +26,7 @@ for r in runs:
     r["sentence_count"] = len(metrics.sentences(rep))
     r["number_mismatch"] = metrics.number_mismatch(rep, docs)
     changed += abs(r["grounding_rate"] - r["grounding_rate_prev"]) > 1e-9
-json.dump({"note": "제목 줄 제외 · 약어 마침표 처리 · 표는 칸 단위 후 재채점", "runs": runs},
+json.dump({"note": "제목 줄 제외 · 약어(Inc. · B.V.) 마침표 처리 · 표는 칸 단위 후 재채점", "runs": runs},
           open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
 ok = [r for r in runs if not r.get("error")]
