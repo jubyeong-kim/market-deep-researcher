@@ -161,11 +161,18 @@ def research(task: dict):
               "세부 수치나 최신 정보가 없는 정도로는 '아니오'.")
     out = llm.ask(system, f"[질문] {task['question']}\n[자료]\n{material or '(없음)'}", coord=False)
     insufficient = bool(re.search(r"부족\s*:\s*예", out))
-    text = re.sub(r"^.*부족\s*:\s*(예|아니오).*$", "", out, flags=re.M)
+    # 신고 표시만 지운다 — 줄째 지우면 같은 줄에 쓴 본문까지 날아간다 (Q3 빈 절 추적 중 발견)
+    text = re.sub(r"[(\[]?부족\s*:\s*(예|아니오)[)\]]?\.?", "", out)
     text = re.sub(r"^\s*(#.*|-{3,})\s*$", "", text, flags=re.M).strip()   # 모델이 붙인 제목·구분선 제거
-    return {"drafts": {sec["title"]: {"text": text, "insufficient": insufficient, "read": read,
+    alarms = []
+    if not text:                          # 빈 원고는 조용히 넘기지 않는다: 경보 + 부족 처리 (재위임 대상)
+        insufficient = True
+        alarms.append(f"빈 원고: {sec['title']} ({task['round']}바퀴, 읽음 {read})")
+    return {"drafts": {sec["title"]: {"text": text, "insufficient": insufficient, "read": read, "raw": out,
                                       "attempts": len(read), "round": task["round"]}},
-            "log": [f"조사: {sec['title']} ({task['round']}바퀴) 읽음 {read}{' · 부족 신고' if insufficient else ''}"]}
+            "alarms": alarms,
+            "log": [f"조사: {sec['title']} ({task['round']}바퀴) 읽음 {read}"
+                    f"{' · 부족 신고' if insufficient else ''}{' · 빈 원고' if not text else ''}"]}
 
 
 # ④ 점검 — LLM 호출 0회. 부족 신고한 절만 다시 내보내고, 멈춘 이유를 남긴다
@@ -189,15 +196,21 @@ def after_check(s: State):
 
 # ⑤ 종합 — 코디네이터는 절 제목만 보고 머리말·맺음말을 쓴다. 절 본문은 손대지 않는다(격리 유지, 인용 보존)
 def synthesize(s: State):
-    titles = [p["title"] for p in s["plan"]]
+    # 인용이 하나도 없는 절(빈 원고 포함)은 본문에서 빼고 맺음말에 밝힌다 — 빈 제목만 남기면 보고서가 멀쩡해 보인다.
+    # 2차 실험의 빈 절 15건은 전부 '고객·글로벌·규제' 같은 밖으로 벌린 절이었고, 읽은 문서가 절 주인공을 다루지 않았다.
+    all_titles = [p["title"] for p in s["plan"]]
+    titles = [t for t in all_titles if t in s["drafts"] and n_citations(s["drafts"][t]["text"]) > 0]
+    dropped = [t for t in all_titles if t not in titles]
     system = ("너는 시장조사 보고서 편집자다. 절 본문은 이미 있다. 질문과 절 제목만 보고 "
               "머리말(보고서가 무엇을 어떤 순서로 다루는지, 2~3문장)과 맺음말(더 조사할 점, 1~2문장)만 써라. "
               "숫자나 사실 주장은 쓰지 마라. '작성하겠습니다' 같은 설명 없이 바로 본문만. 형식: 머리말 본문, 줄바꿈 후 '---', 줄바꿈 후 맺음말 본문.")
     out = llm.ask(system, f"[질문] {s['question']}\n[절] " + " / ".join(titles), coord=True)
     head, _, foot = out.partition("---")
-    body = "\n\n".join(f"## {t}\n{s['drafts'][t]['text']}" for t in titles if t in s["drafts"])
-    return {"report": f"# {s['question']}\n\n{head.strip()}\n\n{body}\n\n## 맺음말\n{foot.strip()}",
-            "log": ["종합 완료"]}
+    body = "\n\n".join(f"## {t}\n{s['drafts'][t]['text']}" for t in titles)
+    note = (f"\n\n자료 부족으로 다루지 못한 절: {', '.join(dropped)} (조사관이 읽은 문서에 근거가 없었음)" if dropped else "")
+    return {"report": f"# {s['question']}\n\n{head.strip()}\n\n{body}\n\n## 맺음말\n{foot.strip()}{note}",
+            "alarms": [f"보고서에서 뺀 절: {t}" for t in dropped],
+            "log": ["종합 완료" + (f" (근거 없는 절 {len(dropped)}개 제외)" if dropped else "")]}
 
 
 def build():
@@ -253,9 +266,11 @@ def run(question: str, cfg: dict = None, label: str = "base", on_log=print, appr
     dump("visited.json", {t: x["read"] for t, x in drafts.items()})
     dump("metrics.json", m)
     for t, x in drafts.items():
-        (d / "sections" / f"{re.sub(r'[^0-9A-Za-z가-힣]+', '_', t)}.md").write_text(
+        name = re.sub(r'[^0-9A-Za-z가-힣]+', '_', t)
+        (d / "sections" / f"{name}.md").write_text(
             x["text"] + (f"\n\n<!-- 채택 안 된 재위임 원고 -->\n{x['rejected']}" if x.get("rejected") else ""),
             encoding="utf-8")
+        (d / "sections" / f"{name}.raw.txt").write_text(x.get("raw", ""), encoding="utf-8")   # 정리 전 모델 응답
     (d / "report.md").write_text(out["report"], encoding="utf-8")
     with open(BASE / "output" / "runs.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps({"dir": d.name, "question": question, "label": label,

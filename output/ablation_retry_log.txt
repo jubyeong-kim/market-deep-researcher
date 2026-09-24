@@ -1,0 +1,66 @@
+재시도: Q7 base 반복2
+기획: 절 4개 — BYD의 배터리 사업 기초, BYD의 전기차 산업 진입, BYD의 LFP 배터리 기술 경쟁력, BYD의 글로벌 시장 확장과 경쟁
+조사: BYD의 배터리 사업 기초 (0바퀴) 읽음 ['BYD Company', 'CATL', 'Battery electric bus']
+조사: BYD의 전기차 산업 진입 (0바퀴) 읽음 ['BYD Auto', 'Electric vehicle battery', 'Electric vehicle']
+조사: BYD의 LFP 배터리 기술 경쟁력 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Lithium iron phosphate', 'Rechargeable battery'] · 부족 신고
+조사: BYD의 글로벌 시장 확장과 경쟁 (0바퀴) 읽음 ['Tesla, Inc.', 'Battery electric vehicle', 'Tesla Model 3'] · 부족 신고
+점검: 부족 ['BYD의 LFP 배터리 기술 경쟁력', 'BYD의 글로벌 시장 확장과 경쟁'] → 재위임
+조사: BYD의 LFP 배터리 기술 경쟁력 (1바퀴) 읽음 ['Lithium polymer battery', 'Lithium-ion battery', 'Solid-state battery'] · 부족 신고
+조사: BYD의 글로벌 시장 확장과 경쟁 (1바퀴) 읽음 ['Hyundai Motor Company', 'Kia', 'Volkswagen'] · 부족 신고
+점검: 부족 ['BYD의 LFP 배터리 기술 경쟁력', 'BYD의 글로벌 시장 확장과 경쟁'] → 바퀴 소진
+종합 완료
+재시도: Q7 no_assignment 반복2
+기획: 절 5개 — BYD의 배터리 사업 기반, 핵심 기술: LFP 배터리의 경쟁 우위, 자동차 제조 사업으로의 확장, 글로벌 전기차 시장에서의 경쟁 위상, 배터리-자동차 수직통합 전략
+조사: BYD의 배터리 사업 기반 (0바퀴) 읽음 ['Lithium-ion battery', 'Electric vehicle battery', 'Rechargeable battery'] · 부족 신고
+조사: 핵심 기술: LFP 배터리의 경쟁 우위 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Lithium iron phosphate', 'BYD Auto']
+조사: 자동차 제조 사업으로의 확장 (0바퀴) 읽음 ['Hyundai Motor Company', 'Electric car', 'Tesla, Inc.'] · 부족 신고
+조사: 글로벌 전기차 시장에서의 경쟁 위상 (0바퀴) 읽음 ['CATL', 'Toyota', 'Electric vehicle'] · 부족 신고
+조사: 배터리-자동차 수직통합 전략 (0바퀴) 읽음 ['Solid-state battery', 'Volkswagen', 'Panasonic'] · 부족 신고
+점검: 부족 ['BYD의 배터리 사업 기반', '자동차 제조 사업으로의 확장', '글로벌 전기차 시장에서의 경쟁 위상', '배터리-자동차 수직통합 전략'] → 재위임
+조사: BYD의 배터리 사업 기반 (1바퀴) 읽음 ['Nickel–cadmium battery', 'Nickel–metal hydride battery', 'Sodium-ion battery'] · 부족 신고
+조사: 자동차 제조 사업으로의 확장 (1바퀴) 읽음 ['Charging station', 'Battery electric vehicle', 'Plug-in hybrid'] · 부족 신고
+조사: 글로벌 전기차 시장에서의 경쟁 위상 (1바퀴) 읽음 ['BYD Company', 'Kia', 'General Motors'] · 부족 신고
+조사: 배터리-자동차 수직통합 전략 (1바퀴) 읽음 ['Lithium', 'Nickel', 'Cobalt'] · 부족 신고
+점검: 부족 ['BYD의 배터리 사업 기반', '자동차 제조 사업으로의 확장', '글로벌 전기차 시장에서의 경쟁 위상', '배터리-자동차 수직통합 전략'] → 바퀴 소진
+종합 완료
+재시도: Q7 no_zones 반복2
+기획: 절 5개 — BYD의 배터리 사업 기원과 발전, LiFePO4 기술의 혁신과 경쟁력, BYD의 자동차 사업 확장, 전기차 시장의 성장 동력, 글로벌 경쟁 환경과 BYD의 위상
+조사: BYD의 배터리 사업 기원과 발전 (0바퀴) 읽음 ['BYD Company', 'CATL', 'Electric vehicle']
+조사: LiFePO4 기술의 혁신과 경쟁력 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Rechargeable battery', 'Lithium iron phosphate']
+조사: BYD의 자동차 사업 확장 (0바퀴) 읽음 ['BYD Auto', 'Hyundai Motor Company', 'Lithium-ion battery']
+조사: 전기차 시장의 성장 동력 (0바퀴) 읽음 ['Battery electric vehicle', 'Electric vehicle', 'Lithium-ion battery']
+조사: 글로벌 경쟁 환경과 BYD의 위상 (0바퀴) 읽음 ['Tesla, Inc.', 'Electric vehicle', 'Lithium-ion battery'] · 부족 신고
+점검: 부족 ['글로벌 경쟁 환경과 BYD의 위상'] → 재위임
+조사: 글로벌 경쟁 환경과 BYD의 위상 (1바퀴) 읽음 ['Electric vehicle battery', 'Solid-state battery', 'Lithium iron phosphate battery'] · 부족 신고
+점검: 부족 ['글로벌 경쟁 환경과 BYD의 위상'] → 바퀴 소진
+종합 완료
+재시도: Q7 no_redelegation 반복2
+기획: 절 5개 — BYD의 배터리 사업 기원 및 성장, 배터리 기술 혁신 - LFP 배터리의 경쟁력, 자동차 사업으로의 사업 확장, 전기차 제품 포트폴리오의 다양화, 글로벌 시장 확장과 경쟁 지위 확립
+조사: BYD의 배터리 사업 기원 및 성장 (0바퀴) 읽음 ['BYD Company', 'Lithium-ion battery', 'Electric vehicle']
+조사: 배터리 기술 혁신 - LFP 배터리의 경쟁력 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Electric vehicle battery', 'Lithium iron phosphate']
+조사: 자동차 사업으로의 사업 확장 (0바퀴) 읽음 ['BYD Auto', 'Hyundai Motor Company', 'Kia']
+조사: 전기차 제품 포트폴리오의 다양화 (0바퀴) 읽음 ['Electric car', 'Volkswagen', 'Solid-state battery'] · 부족 신고
+조사: 글로벌 시장 확장과 경쟁 지위 확립 (0바퀴) 읽음 ['Tesla, Inc.', 'General Motors', 'CATL'] · 부족 신고
+점검: 부족 ['전기차 제품 포트폴리오의 다양화', '글로벌 시장 확장과 경쟁 지위 확립'] → 설정으로 끔
+종합 완료
+재시도: Q7 no_links 반복2
+기획: 절 5개 — BYD의 배터리 사업 기초와 성장, BYD의 자동차 사업 진출과 확장, BYD의 차별화 기술: LFP 배터리, BYD의 다양한 EV 세그먼트 포트폴리오, BYD의 글로벌 경쟁 위치와 시장 지위
+조사: BYD의 배터리 사업 기초와 성장 (0바퀴) 읽음 ['BYD Company', 'Electric vehicle', 'Lithium-ion battery']
+조사: BYD의 자동차 사업 진출과 확장 (0바퀴) 읽음 ['BYD Auto', 'Hyundai Motor Company', 'Electric vehicle battery']
+조사: BYD의 차별화 기술: LFP 배터리 (0바퀴) 읽음 ['Lithium iron phosphate battery', 'Lithium iron phosphate', 'Solid-state battery'] · 부족 신고
+조사: BYD의 다양한 EV 세그먼트 포트폴리오 (0바퀴) 읽음 ['Battery electric vehicle', 'Plug-in hybrid', 'Kia'] · 부족 신고
+조사: BYD의 글로벌 경쟁 위치와 시장 지위 (0바퀴) 읽음 ['Tesla, Inc.', 'Volkswagen', 'General Motors'] · 부족 신고
+점검: 부족 ['BYD의 차별화 기술: LFP 배터리', 'BYD의 다양한 EV 세그먼트 포트폴리오', 'BYD의 글로벌 경쟁 위치와 시장 지위'] → 재위임
+조사: BYD의 차별화 기술: LFP 배터리 (1바퀴) 읽음 ['Samsung SDI', 'SK Innovation', 'CATL'] · 부족 신고
+조사: BYD의 다양한 EV 세그먼트 포트폴리오 (1바퀴) 읽음 ['Hybrid electric vehicle', 'Battery electric bus', 'Panasonic'] · 부족 신고
+조사: BYD의 글로벌 경쟁 위치와 시장 지위 (1바퀴) 읽음 ['Ultium', 'Lithium', 'Nickel'] · 부족 신고
+점검: 부족 ['BYD의 차별화 기술: LFP 배터리', 'BYD의 다양한 EV 세그먼트 포트폴리오', 'BYD의 글로벌 경쟁 위치와 시장 지위'] → 바퀴 소진
+종합 완료
+재시도: Q7 baseline 반복2
+label             n  ground  concen    dup   isol  calls   secs  alarms
+base              9   0.591   0.608     0.0   0.156   6.444 157.189      15
+no_assignment     9   0.603   0.666     0.0   0.143   7.444 154.389      16
+no_zones          9   0.645   0.577   0.271   0.153   6.333 168.067      16
+no_redelegation   9   0.527    0.52     0.0   0.125   5.889 139.222      13
+no_links          9   0.605   0.568     0.0   0.137   6.889 168.711      14
+baseline          9   0.729   0.662     0.0     1.0     2.0  58.411      19
