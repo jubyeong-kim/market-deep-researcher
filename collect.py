@@ -12,6 +12,7 @@ from collections import Counter
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"   # 한국어 위키는 회사 문서가 1~3천 자로 짧아 영어로 바꿈
 WIKI_UA = "market-deep-researcher/0.1 (student project)"  # ASCII only
+_API_CALLS = 0  # wiki_collect 한 번당 HTTP 요청 수 (task 08 속도 측정용)
 
 
 def build_links(docs: dict[str, str]) -> dict[str, list[str]]:
@@ -77,10 +78,12 @@ def load_uploads(folder: str) -> dict[str, str]:
 
 def _wiki_api(params: dict, tries: int = 5) -> dict:
     """MediaWiki API 한 번 호출 (호출 사이 0.3초 대기, 429 시 Retry-After 후 재시도)."""
+    global _API_CALLS
     qs = urllib.parse.urlencode(params)
     req = urllib.request.Request(WIKI_API + "?" + qs, headers={"User-Agent": WIKI_UA})
     for attempt in range(tries):
         try:
+            _API_CALLS += 1
             with urllib.request.urlopen(req, timeout=30) as r:
                 data = json.load(r)
             time.sleep(0.3)
@@ -148,12 +151,17 @@ def _search_title(q: str) -> str:
     return hits[0] if hits else q
 
 
-def wiki_collect(seeds: list[str], target_docs: int = 40, min_chars: int = 3000, checkpoint: str = None) -> dict:
+def wiki_collect(seeds: list[str], target_docs: int = 40, min_chars: int = 3000,
+                 checkpoint: str = None, intro_filter: bool = True) -> dict:
     """한국어 위키백과 수집: 시드 우선, 다음은 시드들이 공유한 2홉 후보 순. {"docs","links"} 반환."""
+    global _API_CALLS
+    _API_CALLS = 0
+    t0 = time.time()
     docs: dict[str, str] = {}
     raw_links: dict[str, list] = {}
     redirect_map: dict[str, str] = {}
     seen: set[str] = set()
+    n_cands, n_dropped = 0, 0  # 2홉 후보 수, 사전필터 탈락 수
     # 중간 저장: 5건마다 checkpoint 에 쓰고, 다시 돌리면 이어서 받는다 (끝에 한 번 저장하면 중단 시 전부 날아감)
     if checkpoint and os.path.exists(checkpoint):
         ck = json.load(open(checkpoint, encoding="utf-8"))
@@ -193,6 +201,53 @@ def wiki_collect(seeds: list[str], target_docs: int = 40, min_chars: int = 3000,
                 save_ck()
         return targets
 
+    def pages_of(data: dict) -> tuple:
+        """배치 응답에서 ({정규제목: 페이지}, 요청제목 해소함수) 추출. redirect_map은 갱신."""
+        q = data.get("query", {})
+        rmap = {d["from"]: d["to"] for d in q.get("redirects", [])}
+        nmap = {n["from"]: n["to"] for n in q.get("normalized", [])}
+        redirect_map.update(rmap)
+        pages = {p.get("title"): p for p in q.get("pages", {}).values()}
+
+        def resolve(r: str):
+            t = nmap.get(r, r)
+            return rmap.get(t, t)
+        return pages, resolve
+
+    def prefilter_chunk(chunk: list[str]) -> tuple:
+        """한 청크(20개 이하) 사전필터 → (생존 목록, 탈락 수).
+        info 1회(전체 청크 길이) + exintro 1회(생존자 도입부 주제어)."""
+        if not chunk:
+            return [], 0
+        data = _wiki_api({"action": "query", "prop": "info", "titles": "|".join(chunk),
+                          "redirects": 1, "format": "json"})
+        pages, resolve = pages_of(data)
+        alive, dropped = [], 0
+        for r in chunk:
+            pg = pages.get(resolve(r))
+            if pg is None:
+                alive.append(r)  # 응답 없음: 보수적으로 유지
+            elif "missing" in pg or (pg.get("length") or 0) < min_chars:
+                dropped += 1
+            else:
+                alive.append(r)
+        if intro_filter and alive:
+            data = _wiki_api({"action": "query", "prop": "extracts", "exintro": 1,
+                              "explaintext": 1, "exlimit": 20, "titles": "|".join(alive),
+                              "redirects": 1, "format": "json"})
+            pages, resolve = pages_of(data)
+            kept = []
+            for r in alive:
+                pg = pages.get(resolve(r))
+                if pg is None:
+                    kept.append(r)
+                elif "missing" in pg or not TOPIC.search(pg.get("extract") or ""):
+                    dropped += 1
+                else:
+                    kept.append(r)
+            alive = kept
+        return alive, dropped
+
     cand_counts: Counter = Counter()
     for s in seeds:  # 1) 시드 우선
         if len(docs) >= target_docs:
@@ -205,14 +260,26 @@ def wiki_collect(seeds: list[str], target_docs: int = 40, min_chars: int = 3000,
         for t in targets or []:
             if t not in seen and not _skip_title(t):
                 cand_counts[t] += 1
-    # 2) 2홉 후보: 여러 시드가 공유한 순
-    for cand, _ in sorted(cand_counts.items(), key=lambda kv: (-kv[1], kv[0])):
+    # 2) 2홉 후보: 여러 시드가 공유한 순, 20개씩 청크로 게으르게 사전필터.
+    #    목표 달성 즉시 중단 (뒷 청크는 조회하지 않음)
+    ordered = [c for c, _ in sorted(cand_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+               if c not in seen and c not in docs and not _skip_title(c)]
+    n_cands = len(ordered)
+    n_dropped = 0
+    for i in range(0, len(ordered), 20):
         if len(docs) >= target_docs:
             break
-        if cand in seen or cand in docs or _skip_title(cand):
-            continue
-        seen.add(cand)
-        store(cand)
+        chunk = [c for c in ordered[i:i + 20]
+                 if c not in seen and c not in docs and not _skip_title(c)]
+        survivors, dropped = prefilter_chunk(chunk)
+        n_dropped += dropped
+        for cand in survivors:
+            if len(docs) >= target_docs:
+                break
+            if cand in seen or cand in docs:
+                continue
+            seen.add(cand)
+            store(cand)
 
     def norm(t: str) -> str:  # 리다이렉트 해소
         seen_t: set[str] = set()
@@ -223,6 +290,8 @@ def wiki_collect(seeds: list[str], target_docs: int = 40, min_chars: int = 3000,
 
     links = {t: sorted({norm(u) for u in tgts if norm(u) in docs and norm(u) != t})
              for t, tgts in raw_links.items()}
+    print(f"API 호출 {_API_CALLS}회, 걸린 시간 {time.time() - t0:.0f}초, "
+          f"후보 {n_cands}개 중 사전필터 탈락 {n_dropped}개", flush=True)
     return {"docs": docs, "links": links}
 
 
@@ -235,7 +304,7 @@ def main() -> None:
     args = sys.argv[1:]
     if not args:
         print("사용법: python collect.py data/<market>/corpus.json")
-        print("       python collect.py build <market> <seed1> <seed2> ... [--n 5]")
+        print("       python collect.py build <market> <seed1> <seed2> ... [--n 5] [--no-intro-filter]")
         sys.exit(1)
     if args[0] == "build":
         rest = list(args[1:])
@@ -244,11 +313,15 @@ def main() -> None:
             i = rest.index("--n")
             target_docs = int(rest[i + 1])
             del rest[i:i + 2]
+        intro_filter = True
+        if "--no-intro-filter" in rest:
+            intro_filter = False
+            rest.remove("--no-intro-filter")
         if not rest:
-            print("사용법: python collect.py build <market> <seed1> ... [--n 5]")
+            print("사용법: python collect.py build <market> <seed1> ... [--n 5] [--no-intro-filter]")
             sys.exit(1)
         market, seeds = rest[0], rest[1:]
-        wiki = wiki_collect(seeds, target_docs=target_docs,
+        wiki = wiki_collect(seeds, target_docs=target_docs, intro_filter=intro_filter,
                             checkpoint=os.path.join("data", market, "_checkpoint.json"))
         uploads = load_uploads(os.path.join("data", market, "uploads"))
         docs = dict(wiki["docs"])
