@@ -3,7 +3,8 @@ import re
 from collections import Counter
 
 CIT_RE = re.compile(r"«([^»]+)»")
-NUM_RE = re.compile(r"\d+(?:,\d+)*(?:\.\d+)?%?")
+# 영문자에 붙은 숫자(V2G · M3P)는 이름이지 수치가 아니다 — 주체 규칙 확장판에서 "V2G" 의 2 가 경보였다
+NUM_RE = re.compile(r"(?<![A-Za-z])\d+(?:,\d+)*(?:\.\d+)?%?(?![A-Za-z])")
 # 문장 분리: ? ! 。 개행은 항상, 마침표는 숫자 사이 소수점(3.2)이 아닐 때만
 SENT_SPLIT_RE = re.compile(r"[?!。\n]+|(?<!\d)\.|\.(?!\d)")
 TABLE_SEP_RE = re.compile(r"^\|[\s:|-]*-[\s:|-]*$")        # |---|---|
@@ -70,10 +71,27 @@ def split_cite(c: str, known) -> list[str]:
     for part in c.split(", "):
         buf = f"{buf}, {part}" if buf else part
         page = re.sub(r" p\d+(-\d+)?$", "", out[-1]) + " " + part if out and re.fullmatch(r"p\d+(-\d+)?", part) else ""
-        if buf in known or page in known:
-            out.append(buf if buf in known else page)
+        hit = next((t for t in (buf, page) if t and in_chunk(t, known)), None)
+        if hit:
+            out.append(in_chunk(hit, known))
             buf = ""
     return out + ([buf] if buf else [])
+
+
+def in_chunk(t: str, known):
+    """t 가 읽은 문서면 그대로, '파일 p98' 처럼 읽은 조각('파일 p97-98') 안의 쪽이면 그 조각 제목. 아니면 None.
+    조사관이 조각 안의 한 쪽만 골라 적은 인용이 허위 인용으로 잡혔다 (주체 규칙 확장판). 조각 밖 쪽(p161-183)은 그대로 경보"""
+    if t in known:
+        return t
+    m = re.fullmatch(r"(.+) p(\d+)(?:-(\d+))?", t)
+    if not m:
+        return None
+    a, b = int(m.group(2)), int(m.group(3) or m.group(2))
+    for k in known:
+        n = re.fullmatch(re.escape(m.group(1)) + r" p(\d+)(?:-(\d+))?", k)
+        if n and int(n.group(1)) <= a and b <= int(n.group(2) or n.group(1)):
+            return k
+    return None
 
 
 def false_citations(text: str, visited: set) -> set:
@@ -150,6 +168,8 @@ if __name__ == "__main__":
     assert sentences("점유율 17.6% «Tesla, Inc.». 다음 «Kia».") == ["점유율 17.6% «Tesla, Inc.»", "다음 «Kia»"]
     assert number_mismatch("점유율 17.6% «Tesla, Inc.».", {"Tesla, Inc.": "a share of 17.6%"}) == []
     assert number_mismatch("점유율이 높다 «R 2024 p25-26».", {"R 2024 p25-26": "share is high"}) == []   # 제목 속 숫자
+    assert number_mismatch("V2G 와 M3P 를 지원한다 «R».", {"R": "bidirectional"}) == []                   # 이름 속 숫자
+    assert len(number_mismatch("Model 3 이 30% 팔렸다 «R».", {"R": "Model 3 sold"})) == 1                # 30% 는 여전히 검사
     # 표: 칸 하나 = 문장 하나. 머리 행·구분선·축 이름·빈칸 표시는 세지 않는다
     t = "| 축 | A | B |\n|---|---|---|\n| 위치 | 2위 «X». | 자료 없음 |\n| 기술 | (카드 없음) | 전고체 «Y» |"
     assert sentences(t) == ["2위 «X»", "전고체 «Y»"] and grounding_rate(t) == 1.0
@@ -163,6 +183,9 @@ if __name__ == "__main__":
     seen = {"Samsung SDI", "Tesla, Inc.", "R p99-100", "R p145-147"}
     assert false_citations("«Samsung SDI, R p145-147» «Tesla, Inc.» «R p99-100, p145-147»", seen) == set()
     assert false_citations("«Samsung SDI, Nope»", seen) == {"Nope"}
+    # 읽은 조각 안의 한 쪽은 그 조각으로, 조각 밖 쪽이나 원문 속 참고문헌 표기는 경보
+    assert false_citations("«R p100» «R p146, p147»", seen) == set()
+    assert false_citations("«R p99-183» «Piedmont Lithium (2023)»", seen) == {"R p99-183", "Piedmont Lithium (2023)"}
     # concentration: 최다 인용 비중
     assert concentration("«A»«A»«B»") == 2 / 3
     assert concentration("인용 없음") == 0.0

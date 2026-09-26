@@ -67,6 +67,11 @@ out = graph.build().invoke({"question": "3사 전략 차이?", "cfg": cfg, "corp
                             "plan": [{"title": t, "role": "조사관", "seed": None, "budget": 1} for t in ("LG", "SK")]})
 assert "| 시장 위치(점유율 순위) | 세계 2위다 «LG Chem». | 5위권이다 «SK Innovation». |" in out["report"]
 
+# '(업계 공통)' 표시를 축 이름 앞에 써도 카드로 읽는다 (표시는 칸 앞으로)
+_, card, al = graph.parse_card("본문 «X».\n[비교 카드]\n(업계 공통) 지역 생산: 한국 업체들은 해외 350 GWh «R».\n기술: 자료 없음",
+                               ["지역 생산", "기술"], "LG")
+assert card == {"지역 생산": "(업계 공통) 한국 업체들은 해외 350 GWh «R».", "기술": "자료 없음"} and al == [], card
+
 # 재위임: 채택 안 된 두 번째 원고도 원본 응답은 남는다 (0바퀴 빈 원고 추적용)
 m = graph.keep_better({"A": {"text": "x «D».", "read": ["a"], "raw": "r0", "insufficient": True}},
                       {"A": {"text": "", "read": ["b"], "raw": "r1", "insufficient": True, "round": 1}})

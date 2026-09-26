@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).parent
-LABELS = ["base", "no_assignment", "no_zones", "no_redelegation", "no_links", "compare_table", "uploads_table", "subject_check", "subject_check2", "subject_rule", "uploads_rule", "uploads_rule2", "baseline"]
+LABELS = ["base", "no_assignment", "no_zones", "no_redelegation", "no_links", "compare_table", "uploads_table", "subject_check", "subject_check2", "subject_check3", "subject_rule", "uploads_rule", "uploads_rule2", "baseline"]
 
 
 def load_rows(runs_file: str) -> list:

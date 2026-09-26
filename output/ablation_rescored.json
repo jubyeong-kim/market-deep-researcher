@@ -1207,7 +1207,7 @@
       "number_mismatch": [
         [
           "2023년 세계 배터리 생산 능력은 거의 2,000GWh에 달했으며, 중국의 생산 능력은 그 해 45% 증가했다 «Electric vehicle battery»",
-          "2,000"
+          "2,00"
         ]
       ],
       "isolation": 0.06280757735781219,
@@ -1450,12 +1450,7 @@
       "false_citations": [],
       "concentration": 0.3389830508474576,
       "duplicate_rate": 0.2777777777777778,
-      "number_mismatch": [
-        [
-          "안전성은 LiFePO4의 중요한 경쟁력이다",
-          "4"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.06977287518982694,
       "alarms": [],
       "stop_reason": "바퀴 소진",
