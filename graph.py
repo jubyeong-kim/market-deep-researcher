@@ -90,6 +90,7 @@ class State(TypedDict, total=False):
     plan: list            # [{title, role, seed, budget}]
     axes: list            # 비교축 (compare_table 켰을 때만). 절들이 같은 축으로 카드를 쓴다
     skipped: list         # 조사 전에 뺀 절 (subject_check 켜고 사람이 목차를 안 볼 때)
+    subjects: list        # 주인공 검사에 쓴 이름 (코드가 문서에서 확인한 것만) — metrics.json 에 남김
     alarms: Annotated[list, operator.add]
     drafts: Annotated[dict, keep_better]   # 절 -> {text, card, insufficient, read, attempts}
     round: int
@@ -142,7 +143,10 @@ def plan(s: State):
         # 옛 이름 · 모회사 이름도 받는다 — "LG Energy Solution" 만 받았더니 LG 절이 읽는 «LG Chem» 문서엔 그 표기가 1번뿐이라
         # 회사 절이 벌린 절로 빠졌다 (같은 문서에 "LG Chem" 은 23번). 예시에 실험 질문의 답을 넣지 않으려고 일반 표현으로 쓴다
         # 정식 명칭만 받으면("BYD Company") 문서가 줄여 쓴 "BYD" 를 0회로 센다 → 약칭도 받는다 (Q7: LFP 문서에 "BYD" 2회인데 0회로 빠짐)
-        system += (' 또 질문의 주인공(회사 · 제품 등)을 문서에 쓰인 영어 표기로 1~8개 적어라. 문서가 줄여 부르는 이름(약칭), '
+        # 질문이 묻는 대상만 — 고객사(Hyundai) · 경쟁사(Tesla)까지 넣었더니 '고객사 전략' 절이 제 시작문서 속 'Hyundai' 로
+        # 검사를 통과하고 빈 절이 됐다 (B 최종판 Q3 2회차 추적)
+        system += (' 또 질문의 주인공(회사 · 제품 등)을 문서에 쓰인 영어 표기로 1~8개 적어라. 질문이 묻는 대상만 적고, '
+                   '목차에 나오는 고객사 · 경쟁사 · 기술 이름은 넣지 마라. 문서가 줄여 부르는 이름(약칭), '
                    '옛 이름, 모회사 이름으로 쓰고 있으면 그 이름도 함께 적어라 (예: 분사한 회사라면 지금 이름과 모회사 이름 둘 다). '
                    'JSON 에 "주인공":["..."] 를 함께 넣어라.')
     user = f"[질문] {s['question']}\n[문서 카드]\n{cards}"
@@ -164,9 +168,9 @@ def plan(s: State):
                              "seed": seed, "budget": cfg["section_budget"], "keywords": x.get("검색어", [])})
         if not sections:
             alarms.append("목차 생성 실패")
-        skipped, again = [], False
+        skipped, again, subjects = [], False, []
         if cfg["switches"]["subject_check"] and sections:
-            sections, more, skipped, again = check_subjects(sections, out.get("주인공") or [], s["corpus"], cfg,
+            sections, more, skipped, again, subjects = check_subjects(sections, out.get("주인공") or [], s["corpus"], cfg,
                                                             s.get("review"))
             alarms += more
         if not again or attempt:
@@ -175,7 +179,7 @@ def plan(s: State):
         redo = (f" 앞서 짠 목차({', '.join(p['title'] for p in sections)})는 모든 절의 읽을 문서에 질문의 주인공이 "
                 "거의 나오지 않았다. 주인공(회사 · 제품) 단위로 절을 다시 나눠라.")
         alarms.append("목차 다시 짜기: 모든 절이 벌린 절 후보")
-    return {"plan": sections, "axes": axes, "skipped": skipped, "round": 0, "alarms": alarms,
+    return {"plan": sections, "axes": axes, "skipped": skipped, "subjects": subjects, "round": 0, "alarms": alarms,
             "log": [f"기획: 절 {len(sections)}개 — " + ", ".join(p["title"] for p in sections)
                     + (f" · 비교축 {axes}" if axes else "") + (f" · 조사 전에 뺀 절 {skipped}" if skipped else "")]}
 
@@ -187,13 +191,17 @@ SUBJECT_MIN = 2   # 첫 바퀴에 읽을 문서 3건에서 주인공 언급이 �
 def check_subjects(sections, names, corpus, cfg, review):
     """조사 전에(LLM 0회) 절마다 첫 바퀴에 읽을 문서에 질문의 주인공이 몇 번 나오는지 센다.
     사람이 목차를 볼 때(review)는 표시만 하고, 사람이 없으면 빼고 보고서에 밝힌다.
-    반환: (절, 경보, 뺀 절 제목, 다시 짤지) — 전부 걸리면 빼지 않고 '다시'를 요청한다 (이름은 문서에서 확인된 것이라 목차가 문제)"""
+    반환: (절, 경보, 뺀 절 제목, 다시 짤지, 쓴 주인공 이름) — 전부 걸리면 빼지 않고 '다시'를 요청한다 (이름은 문서에서 확인된 것이라 목차가 문제)"""
     docs = corpus["docs"]
     names = [n.strip() for n in names if isinstance(n, str) and n.strip()]
     valid = [n for n in names if any(n in v for v in docs.values())]   # 지어낸 표기는 코드가 거른다 (시작문서처럼)
     alarms = [f"주인공 이름 무효 (어느 문서에도 없음): '{n}'" for n in names if n not in valid]
+    # 첫 단어가 대문자 3자 이상(BYD · CATL)이면 약칭도 센다 — 프롬프트로 '약칭도 적어라' 해도 3번에 1번은 정식 명칭만 와서
+    # LFP 문서의 "BYD" 를 0회로 셌다 (B 수정판 Q7). ponytail: LG · SK 같은 2자는 다른 계열사까지 잡혀 넣지 않는다
+    valid += sorted({w for n in valid for w in n.split()[:1] if re.fullmatch(r"[A-Z0-9]{3,}", w) and w not in valid
+                     and any(w in v for v in docs.values())})
     if not valid:
-        return sections, alarms + ["주인공 검사 못 함: 쓸 수 있는 이름이 없음"], [], False
+        return sections, alarms + ["주인공 검사 못 함: 쓸 수 있는 이름이 없음"], [], False, valid
     reads = first_reads(sections, corpus, cfg)
     off = []
     for p in sections:
@@ -202,10 +210,10 @@ def check_subjects(sections, names, corpus, cfg, review):
             off.append(p)
             alarms.append(f"벌린 절 후보: '{p['title']}' — 읽을 문서 {reads[p['title']]}에 주인공 {valid} 언급 {p['subject_hits']}회")
     if review or not off:
-        return sections, alarms, [], False
+        return sections, alarms, [], False, valid
     if len(off) == len(sections):   # 다 빼면 보고서가 없다 → 빼지 않고 목차를 다시 짜게 한다 (두 번째도 전부면 그대로 간다)
-        return sections, alarms + ["벌린 절 후보가 전부라 빼지 않음"], [], True
-    return [p for p in sections if p not in off], alarms, [p["title"] for p in off], False
+        return sections, alarms + ["벌린 절 후보가 전부라 빼지 않음"], [], True, valid
+    return [p for p in sections if p not in off], alarms, [p["title"] for p in off], False, valid
 
 
 # ② 배치 — 절마다 서브에이전트를 동시에 파견, 남의 구역(절 제목·시작문서)을 알려 줌
@@ -271,6 +279,10 @@ def pick_docs(sec, docs, links, avoid, already, budget, use_links, full=frozense
 # - Q3 노트: 원문 주어 LG Chem (1999년) → "LG에너지솔루션은 1999년 …" (LG에너지솔루션은 2020년 설립)
 SUBJECT_RULE = ("원문의 주어를 바꾸지 마라. 원문이 여러 회사를 묶어 말한 내용(예: 'Korean producers')은 한 회사가 한 일처럼 쓰지 말고 "
                 "묶음 그대로 써라 (예: '한국 업체들은 …'). 원문이 옛 회사나 모회사(예: LG Chem)를 말하면 지금 회사 이름으로 바꿔 쓰지 마라.")
+# 같은 규칙을 비교 카드와 비교 요약에도 — 4-6: '묶음 → 한 회사'가 본문은 4 → 1 로 줄었는데 표 칸 · 요약은 4 → 4 그대로였다.
+# 카드엔 '(업계 공통)' 표시를 붙이게 해 표에서 셀 수 있게 한다
+CARD_RULE = "원문이 여러 회사를 묶어 말한 사실이면 한 줄 앞에 '(업계 공통)'을 붙여라 — 이 절 대상만의 사실처럼 쓰지 마라. "
+SUMMARY_RULE = " '(업계 공통)' 이 붙은 칸은 한 회사의 차이로 쓰지 말고 여러 회사에 공통인 사실로 써라. " + SUBJECT_RULE
 
 
 # ③ 조사 — 자기 절 자료만 읽고 원고까지 써서 올림 (원문은 여기서 소화되고 위로는 원고만)
@@ -298,7 +310,8 @@ def research(task: dict):
     if axes:   # 비교 카드: 편집자가 본문을 안 읽고도 절끼리 견줄 수 있게, 같은 축으로 한 줄씩
         system += (" 본문 다음, '부족' 줄 앞에 '[비교 카드]' 한 줄을 쓰고, 아래 비교축마다 한 줄씩 "
                    "'축이름: 이 절 대상의 해당 사실 한 문장 «문서제목»' 형식으로 적어라. 자료에 없으면 '축이름: 자료 없음'. "
-                   f"비교축: {' / '.join(axes)}")
+                   + (CARD_RULE if cfg["switches"]["subject_rule"] else "")   # 4-6: 규칙이 본문엔 먹었는데 한 줄 카드엔 안 먹음
+                   + f"비교축: {' / '.join(axes)}")
     out = llm.ask(system, f"[질문] {task['question']}\n[자료]\n{material or '(없음)'}", coord=False)
     insufficient = bool(re.search(r"부족\s*:\s*예", out))
     body, card, alarms = parse_card(out, axes, sec["title"])
@@ -395,6 +408,8 @@ def compare_table(s: State, titles: list):
     system = ("너는 시장조사 보고서 편집자다. 아래 비교표만 보고 열(절)끼리 견주는 '비교 요약'을 3~5문장으로 써라. "
               "표에 있는 사실만 쓰고, 문장마다 그 사실이 있던 칸의 «문서제목»을 그대로 붙여라 (마침표 바로 앞). "
               "표에 없는 인용·숫자·평가는 쓰지 마라. '자료 없음'·'(카드 없음)' 칸은 견주지 마라. 제목·설명 없이 문장만.")
+    if s["cfg"]["switches"]["subject_rule"]:
+        system += SUMMARY_RULE
     summary = llm.ask(system, f"[질문] {s['question']}\n[비교표]\n{table}", coord=True)
     summary = re.sub(r"^\s*(#.*|-{3,})\s*$", "", summary, flags=re.M).strip()
     extra = sorted(set(metrics.citations(summary)) - set(metrics.citations(table)))   # 편집자가 표 밖에서 가져온 인용
@@ -451,6 +466,8 @@ def run(question: str, cfg: dict = None, label: str = "base", on_log=print, appr
              coord_chars=llm.USAGE["coord_chars"], sub_chars=llm.USAGE["sub_chars"],
              empty_sections=[t for t, d in drafts.items() if n_citations(d["text"]) == 0],
              seconds=round(time.time() - t0, 1))
+    if out.get("subjects"):   # 주인공 검사에 쓴 이름 — 안 남겨서 '고객사 전략' 절이 왜 통과했는지 뒤늦게 경보 문구로 역추적했다
+        m["subjects"] = out["subjects"]
     d = BASE / "output" / "runs" / f"{time.strftime('%m%d-%H%M%S')}_{label}"
     (d / "sections").mkdir(parents=True, exist_ok=True)
     dump = lambda name, obj: (d / name).write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")

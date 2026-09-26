@@ -95,6 +95,7 @@ llm.ask = lambda system, user, coord=False: toc % '["Acme", "Nope"]'
 out = graph.plan({"question": "q", "cfg": cfg, "corpus": fc})
 assert [p["title"] for p in out["plan"]] == ["Acme"] and out["skipped"] == ["규제"], out
 assert any("무효" in a and "Nope" in a for a in out["alarms"])                  # 문서에 없는 표기는 거른다
+assert out["subjects"] == ["Acme"]                                               # 쓴 이름은 남긴다 (metrics.json)
 out = graph.plan({"question": "q", "cfg": cfg, "corpus": fc, "review": True})   # 사람이 목차를 볼 때는 표시만
 assert len(out["plan"]) == 2 and out["skipped"] == [] and out["plan"][1]["subject_hits"] == 0
 calls = []                                                                      # 다 걸리면 빼지 않고 한 번 '다시'
@@ -107,6 +108,10 @@ tocs = ['{"목차":[{"절":"규제1","시작문서":"B"},{"절":"규제2","시�
 llm.ask = lambda system, user, coord=False: tocs.pop(0)
 out = graph.plan({"question": "q", "cfg": {**cfg, "section_budget": 1}, "corpus": fc})   # 절마다 1건만 읽게
 assert [p["title"] for p in out["plan"]] == ["Acme"] and out["skipped"] == ["규제"] and not tocs
+bc = {"docs": {"A": "BYD makes cells. BYD grows.", "B": "tariff", "C": "BYD Auto sells cars"}, "links": {}}   # 약칭 보완
+secs = [{"title": "X", "seed": "A", "budget": 1, "keywords": []}]
+_, _, dropped, _, used = graph.check_subjects(secs, ["BYD Auto"], bc, cfg, review=False)
+assert dropped == [] and "BYD" in used and secs[0]["subject_hits"] == 2   # 'BYD Auto' 만 왔어도 'BYD' 2회로 센다
 llm.ask = lambda system, user, coord=False: "머리.\n---\n맺음."
 rep = graph.synthesize({"question": "q", "cfg": cfg, "plan": [{"title": "Acme"}], "skipped": ["규제"], "axes": [],
                         "drafts": {"Acme": {"text": "x «A».", "card": None}}})["report"]
@@ -119,6 +124,19 @@ cfg["switches"]["subject_rule"] = True
 graph.research({"section": {"title": "Acme", "role": "조사관", "seed": "A", "budget": 1}, "cfg": cfg, "corpus": fc,
                 "picks": ["A"], "others": [], "others_read": [], "already": [], "round": 0, "question": "q"})
 assert graph.SUBJECT_RULE in seen[0]
+# 비교표를 같이 켜면 규칙이 비교 카드 지시문 · 편집자 비교 요약에도 들어간다 (끄면 안 들어간다)
+for rule_on in (True, False):
+    systems, SWITCH_ON = [], True
+    llm.ask = lambda system, user, coord=False: systems.append(system) or fake_ask(system, user, coord)
+    cfg2 = copy.deepcopy(graph.CFG)
+    cfg2["switches"].update(compare_table=True, subject_rule=rule_on)
+    graph.build().invoke({"question": "3사 전략 차이?", "cfg": cfg2, "corpus": graph.load_corpus(cfg2["market"]),
+                          "drafts": {}, "alarms": []})
+    card_sys = [x for x in systems if "[비교 카드]" in x]
+    summary_sys = [x for x in systems if "비교표만 보고" in x]
+    assert card_sys and summary_sys
+    assert all((graph.CARD_RULE in x) == rule_on for x in card_sys)
+    assert all((graph.SUMMARY_RULE in x) == rule_on for x in summary_sys)
 llm.ask = fake_ask
 
 # 껐을 때: 표 없음, 카드 없음, 보고서 모양은 예전 그대로
