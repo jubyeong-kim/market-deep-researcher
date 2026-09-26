@@ -45,6 +45,8 @@ def run_baseline(question: str, cfg: dict = None, budget: int = None, label: str
               "아래 자료에 있는 내용만 쓰고, 모든 문장 끝에 근거 문서를 «문서제목» 형식으로 붙여라. 자료에 없는 숫자는 쓰지 마라. "
               "인용은 문장의 마침표 바로 앞에 붙여라 (예: ...생산했다 «LG Chem».). 문장 앞이나 마침표 뒤에 두지 마라. "
               "인사말·'작성하겠습니다' 같은 설명 없이 바로 본문을 써라.")
+    if cfg["switches"]["subject_rule"]:   # 팀 조사관과 같은 규칙 (공정성)
+        system += " " + graph.SUBJECT_RULE
     report = llm.ask(system, f"[질문] {question}\n[자료]\n{material or '(없음)'}", coord=True)
     budget_used = len(read) / budget if budget else 0.0
     if budget_used < 1.0:

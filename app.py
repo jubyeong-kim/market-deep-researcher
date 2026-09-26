@@ -18,6 +18,7 @@ app = FastAPI()
 # 데모는 사용자가 올린 자료를 조사에 쓴다 (config 의 uploads 는 실험용 기본값 끔 — 2차 실험과 같은 조건)
 DEMO_CFG = copy.deepcopy(graph.CFG)
 DEMO_CFG["switches"]["uploads"] = True
+DEMO_CFG["switches"]["subject_check"] = True   # 목차 확인 때 벌린 절 후보에 ⚠ (빼는 건 사람이)
 
 _state = {"running": False, "done": False, "queue": None, "result": None,
            "question": "", "removed": []}
@@ -184,10 +185,13 @@ def reset():
 def _toc_reply(plan: list, alarms: list) -> str:
     """번호 매긴 목차 + 알람 + 확정 안내."""
     lines = [f"{i}. {p.get('title', '?')} — {p.get('role', '')} "
-             f"(시작 문서: {p.get('seed') or '없음'})" for i, p in enumerate(plan, 1)]
+             f"(시작 문서: {p.get('seed') or '없음'})"
+             + (f" ⚠ 읽을 문서에 주인공 언급 {p['subject_hits']}회 — 빼기 권장"
+                if p.get("subject_hits", graph.SUBJECT_MIN) < graph.SUBJECT_MIN else "")
+             for i, p in enumerate(plan, 1)]
     if _session["pending_axes"]:   # compare_table 켰을 때만 나온다
         lines.append("비교축: " + " · ".join(_session["pending_axes"]))
-    lines += [f"! {a}" for a in (alarms or [])]
+    lines += [f"! {a}" for a in (alarms or []) if not a.startswith("벌린 절 후보")]   # 위 ⚠ 로 이미 보임
     lines.append("이대로 조사할까요? '예' / '빼기 2 4' (번호 빼기) / '다시' (목차 다시 짜기)")
     return "\n".join(lines)
 

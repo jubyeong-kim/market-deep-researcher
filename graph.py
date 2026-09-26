@@ -89,6 +89,7 @@ class State(TypedDict, total=False):
     corpus: dict
     plan: list            # [{title, role, seed, budget}]
     axes: list            # 비교축 (compare_table 켰을 때만). 절들이 같은 축으로 카드를 쓴다
+    skipped: list         # 조사 전에 뺀 절 (subject_check 켜고 사람이 목차를 안 볼 때)
     alarms: Annotated[list, operator.add]
     drafts: Annotated[dict, keep_better]   # 절 -> {text, card, insufficient, read, attempts}
     round: int
@@ -137,41 +138,104 @@ def plan(s: State):
                    "비교축은 목차가 아니다 — 목차는 위 규칙대로 조사 대상 단위로 나누고, 비교축은 그 절들을 같은 기준으로 견줄 항목이다. "
                    "축 이름은 괄호 없이 짧게. 절끼리 견줄 질문이 아니면 빈 목록. "
                    '형식: {"목차":[위와 같음],"비교축":["...","..."]}')
-    out = parse_json(llm.ask(system, f"[질문] {s['question']}\n[문서 카드]\n{cards}", coord=True))
-    axes = [a.strip() for a in out.get("비교축") or [] if isinstance(a, str) and a.strip()][:5] \
-        if cfg["switches"]["compare_table"] else []
-    sections, alarms, taken = [], [], set()
-    for x in out.get("목차", [])[: cfg["max_sections"]]:
-        seed = x.get("시작문서", "")
-        if seed not in docs or seed in taken:          # 모델은 그럴듯한 제목을 지어낸다 → 코드가 검사
-            alarms.append(f"시작문서 무효: '{seed}' (절: {x.get('절')})")
-            seed = None                                  # 조용히 대체하지 않는다
-        if not cfg["switches"]["assignment"]:
-            seed = None
-        taken.add(seed)
-        sections.append({"title": x.get("절", "?"), "role": x.get("역할", "조사관"),
-                         "seed": seed, "budget": cfg["section_budget"], "keywords": x.get("검색어", [])})
-    if not sections:
-        alarms.append("목차 생성 실패")
-    return {"plan": sections, "axes": axes, "round": 0, "alarms": alarms,
+    if cfg["switches"]["subject_check"]:
+        # 옛 이름 · 모회사 이름도 받는다 — "LG Energy Solution" 만 받았더니 LG 절이 읽는 «LG Chem» 문서엔 그 표기가 1번뿐이라
+        # 회사 절이 벌린 절로 빠졌다 (같은 문서에 "LG Chem" 은 23번). 예시에 실험 질문의 답을 넣지 않으려고 일반 표현으로 쓴다
+        # 정식 명칭만 받으면("BYD Company") 문서가 줄여 쓴 "BYD" 를 0회로 센다 → 약칭도 받는다 (Q7: LFP 문서에 "BYD" 2회인데 0회로 빠짐)
+        system += (' 또 질문의 주인공(회사 · 제품 등)을 문서에 쓰인 영어 표기로 1~8개 적어라. 문서가 줄여 부르는 이름(약칭), '
+                   '옛 이름, 모회사 이름으로 쓰고 있으면 그 이름도 함께 적어라 (예: 분사한 회사라면 지금 이름과 모회사 이름 둘 다). '
+                   'JSON 에 "주인공":["..."] 를 함께 넣어라.')
+    user = f"[질문] {s['question']}\n[문서 카드]\n{cards}"
+    alarms, redo = [], ""
+    for attempt in range(2):   # 두 번째는 주인공 검사가 '모든 절이 벌린 절'이라고 할 때만 (스위치 끄면 늘 한 번)
+        out = parse_json(llm.ask(system + redo, user, coord=True))
+        axes = [a.strip() for a in out.get("비교축") or [] if isinstance(a, str) and a.strip()][:5] \
+            if cfg["switches"]["compare_table"] else []
+        sections, taken = [], set()
+        for x in out.get("목차", [])[: cfg["max_sections"]]:
+            seed = x.get("시작문서", "")
+            if seed not in docs or seed in taken:          # 모델은 그럴듯한 제목을 지어낸다 → 코드가 검사
+                alarms.append(f"시작문서 무효: '{seed}' (절: {x.get('절')})")
+                seed = None                                  # 조용히 대체하지 않는다
+            if not cfg["switches"]["assignment"]:
+                seed = None
+            taken.add(seed)
+            sections.append({"title": x.get("절", "?"), "role": x.get("역할", "조사관"),
+                             "seed": seed, "budget": cfg["section_budget"], "keywords": x.get("검색어", [])})
+        if not sections:
+            alarms.append("목차 생성 실패")
+        skipped, again = [], False
+        if cfg["switches"]["subject_check"] and sections:
+            sections, more, skipped, again = check_subjects(sections, out.get("주인공") or [], s["corpus"], cfg,
+                                                            s.get("review"))
+            alarms += more
+        if not again or attempt:
+            break
+        # 사람이 없을 때의 '다시': 절이 전부 주인공을 벗어났다 (B 첫 실행 Q3: 기능별 5절이 전부 언급 0회 → 빈 절 2개)
+        redo = (f" 앞서 짠 목차({', '.join(p['title'] for p in sections)})는 모든 절의 읽을 문서에 질문의 주인공이 "
+                "거의 나오지 않았다. 주인공(회사 · 제품) 단위로 절을 다시 나눠라.")
+        alarms.append("목차 다시 짜기: 모든 절이 벌린 절 후보")
+    return {"plan": sections, "axes": axes, "skipped": skipped, "round": 0, "alarms": alarms,
             "log": [f"기획: 절 {len(sections)}개 — " + ", ".join(p["title"] for p in sections)
-                    + (f" · 비교축 {axes}" if axes else "")]}
+                    + (f" · 비교축 {axes}" if axes else "") + (f" · 조사 전에 뺀 절 {skipped}" if skipped else "")]}
+
+
+SUBJECT_MIN = 2   # 첫 바퀴에 읽을 문서 3건에서 주인공 언급이 이보다 적으면 벌린 절 후보
+                  # 2차 실험 149절: 언급 ≤1회인 58절에 빈 절 15건이 전부 있었고, 2회 이상인 91절엔 0건
+
+
+def check_subjects(sections, names, corpus, cfg, review):
+    """조사 전에(LLM 0회) 절마다 첫 바퀴에 읽을 문서에 질문의 주인공이 몇 번 나오는지 센다.
+    사람이 목차를 볼 때(review)는 표시만 하고, 사람이 없으면 빼고 보고서에 밝힌다.
+    반환: (절, 경보, 뺀 절 제목, 다시 짤지) — 전부 걸리면 빼지 않고 '다시'를 요청한다 (이름은 문서에서 확인된 것이라 목차가 문제)"""
+    docs = corpus["docs"]
+    names = [n.strip() for n in names if isinstance(n, str) and n.strip()]
+    valid = [n for n in names if any(n in v for v in docs.values())]   # 지어낸 표기는 코드가 거른다 (시작문서처럼)
+    alarms = [f"주인공 이름 무효 (어느 문서에도 없음): '{n}'" for n in names if n not in valid]
+    if not valid:
+        return sections, alarms + ["주인공 검사 못 함: 쓸 수 있는 이름이 없음"], [], False
+    reads = first_reads(sections, corpus, cfg)
+    off = []
+    for p in sections:
+        p["subject_hits"] = sum(docs[t][:DOC_CAP].count(n) for t in reads[p["title"]] for n in valid)   # plan.json 에 남김
+        if p["subject_hits"] < SUBJECT_MIN:
+            off.append(p)
+            alarms.append(f"벌린 절 후보: '{p['title']}' — 읽을 문서 {reads[p['title']]}에 주인공 {valid} 언급 {p['subject_hits']}회")
+    if review or not off:
+        return sections, alarms, [], False
+    if len(off) == len(sections):   # 다 빼면 보고서가 없다 → 빼지 않고 목차를 다시 짜게 한다 (두 번째도 전부면 그대로 간다)
+        return sections, alarms + ["벌린 절 후보가 전부라 빼지 않음"], [], True
+    return [p for p in sections if p not in off], alarms, [p["title"] for p in off], False
 
 
 # ② 배치 — 절마다 서브에이전트를 동시에 파견, 남의 구역(절 제목·시작문서)을 알려 줌
-def dispatch(s: State):
-    todo = [p for p in s["plan"] if s["round"] == 0 or s["drafts"].get(p["title"], {}).get("insufficient")]
+def assign(todo, plan, drafts, corpus, cfg) -> dict:
+    """구역: 병렬 조사관은 서로를 못 봐서 같은 인기 문서로 몰린다 → 파견 전에 코드가 겹치지 않게 나눠 준다 (LLM 0회).
+    구역을 끄면 {} → 조사관이 각자 고른다"""
     picks = {}
-    if s["cfg"]["switches"]["zones"]:
-        # 구역: 병렬 조사관은 서로를 못 봐서 같은 인기 문서로 몰린다 → 파견 전에 코드가 겹치지 않게 나눠 준다 (LLM 0회)
-        corpus = s["corpus"]
-        taken = {r for d in s["drafts"].values() for r in d["read"]} | {p["seed"] for p in s["plan"] if p["seed"]}
+    if cfg["switches"]["zones"]:
+        taken = {r for d in drafts.values() for r in d["read"]} | {p["seed"] for p in plan if p["seed"]}
         for p in todo:
-            already = s["drafts"].get(p["title"], {}).get("read", [])
+            already = drafts.get(p["title"], {}).get("read", [])
             own_seed = {p["seed"]} if p["seed"] and p["seed"] not in already else set()
             picks[p["title"]] = pick_docs(p, corpus["docs"], corpus["links"], taken - own_seed, already,
-                                          p["budget"], s["cfg"]["switches"]["links"], set(corpus.get("uploads", ())))
+                                          p["budget"], cfg["switches"]["links"], set(corpus.get("uploads", ())))
             taken |= set(picks[p["title"]])
+    return picks
+
+
+def first_reads(sections, corpus, cfg) -> dict:
+    """절마다 첫 바퀴에 읽을 문서를 파견 때와 같은 규칙으로 미리 계산 (LLM 0회) — 주인공 검사용"""
+    picks = assign(sections, sections, {}, corpus, cfg)
+    return {p["title"]: picks[p["title"]] if p["title"] in picks else
+            pick_docs(p, corpus["docs"], corpus["links"], {q["seed"] for q in sections if q is not p and q["seed"]}, [],
+                      p["budget"], cfg["switches"]["links"], set(corpus.get("uploads", ())))
+            for p in sections}
+
+
+def dispatch(s: State):
+    todo = [p for p in s["plan"] if s["round"] == 0 or s["drafts"].get(p["title"], {}).get("insufficient")]
+    picks = assign(todo, s["plan"], s["drafts"], s["corpus"], s["cfg"])
     return [Send("research", {
         "picks": picks.get(p["title"]),
         "section": p, "question": s["question"], "cfg": s["cfg"], "corpus": s["corpus"], "round": s["round"],
@@ -202,6 +266,13 @@ def pick_docs(sec, docs, links, avoid, already, budget, use_links, full=frozense
     return chosen
 
 
+# 주체 규칙 (스위치 subject_rule): 사람이 원문과 대조해서 찾은 두 가지 실수
+# - 4-5: 원문 "한국 생산업체들의 미국 확장은 GM · Ford · Stellantis 와의 제휴에 기댄다" → "SK온은 … GM, Stellantis 와 파트너십"
+# - Q3 노트: 원문 주어 LG Chem (1999년) → "LG에너지솔루션은 1999년 …" (LG에너지솔루션은 2020년 설립)
+SUBJECT_RULE = ("원문의 주어를 바꾸지 마라. 원문이 여러 회사를 묶어 말한 내용(예: 'Korean producers')은 한 회사가 한 일처럼 쓰지 말고 "
+                "묶음 그대로 써라 (예: '한국 업체들은 …'). 원문이 옛 회사나 모회사(예: LG Chem)를 말하면 지금 회사 이름으로 바꿔 쓰지 마라.")
+
+
 # ③ 조사 — 자기 절 자료만 읽고 원고까지 써서 올림 (원문은 여기서 소화되고 위로는 원고만)
 def research(task: dict):
     sec, cfg, corpus = task["section"], task["cfg"], task["corpus"]
@@ -221,6 +292,8 @@ def research(task: dict):
               "제목·구분선(---)·인사말·'작성하겠습니다' 같은 설명 없이 바로 본문 문단만 써라. 자료가 모자라도 불평하지 말고 있는 만큼 써라. "
               "마지막 줄에만 '부족: 예' 또는 '부족: 아니오'를 적어라. '예'는 이 절의 핵심 질문에 답할 사실이 자료에 거의 없을 때만이다 — "
               "세부 수치나 최신 정보가 없는 정도로는 '아니오'.")
+    if cfg["switches"]["subject_rule"]:
+        system += " " + SUBJECT_RULE
     axes = task.get("axes") or []
     if axes:   # 비교 카드: 편집자가 본문을 안 읽고도 절끼리 견줄 수 있게, 같은 축으로 한 줄씩
         system += (" 본문 다음, '부족' 줄 앞에 '[비교 카드]' 한 줄을 쓰고, 아래 비교축마다 한 줄씩 "
@@ -298,6 +371,8 @@ def synthesize(s: State):
     head, _, foot = out.partition("---")
     body = "\n\n".join(f"## {t}\n{s['drafts'][t]['text']}" for t in titles)
     note = (f"\n\n자료 부족으로 다루지 못한 절: {', '.join(dropped)} (조사관이 읽은 문서에 근거가 없었음)" if dropped else "")
+    if s.get("skipped"):
+        note += f"\n\n조사 전에 뺀 절: {', '.join(s['skipped'])} (읽을 문서에 질문의 주인공이 거의 안 나옴)"
     compare, alarms = compare_table(s, titles)
     return {"report": f"# {s['question']}\n\n{head.strip()}\n\n{compare}{body}\n\n## 맺음말\n{foot.strip()}{note}",
             "alarms": [f"보고서에서 뺀 절: {t}" for t in dropped] + alarms,
@@ -346,7 +421,8 @@ def propose_plan(question: str, cfg: dict = None) -> dict:
     cfg = cfg or CFG
     for k in llm.USAGE:
         llm.USAGE[k] = 0
-    return plan({"question": question, "cfg": cfg, "corpus": load_corpus(cfg["market"], cfg["switches"]["uploads"])})
+    return plan({"question": question, "cfg": cfg, "corpus": load_corpus(cfg["market"], cfg["switches"]["uploads"]),
+                 "review": True})   # 사람이 목차를 본다 → 벌린 절 후보는 빼지 않고 표시만
 
 
 def run(question: str, cfg: dict = None, label: str = "base", on_log=print, approved_plan: list = None,

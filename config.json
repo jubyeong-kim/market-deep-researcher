@@ -19,6 +19,8 @@
     "links": true,
     "web_on_question": false,
     "compare_table": false,
-    "uploads": false
+    "uploads": false,
+    "subject_check": false,
+    "subject_rule": false
   }
 }
