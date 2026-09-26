@@ -36,6 +36,11 @@ def citations(text: str) -> list[str]:
 def sentences(text: str) -> list[str]:
     """문장 분리: . ? ! 。 개행 기준, 빈 문자열 제거.
     마침표 뒤에 붙은 인용은 앞 문장 것으로 본다 — 안 그러면 다음 문장에 붙어 근거율이 틀린다."""
+    # 인용 제목은 잠시 번호로 바꿔 둔다 — 제목 속 마침표(«Tesla, Inc.»)에서 자르지 않고, 아래 약어 규칙이 제목을
+    # «Tesla, Inc» 로 바꾸지도 않게 (바뀐 제목은 문서를 못 찾아 숫자 검사에서 그 문장 숫자가 전부 경보였다 — Q7 비교표 실험)
+    cites = []
+    text = CIT_RE.sub(lambda m: cites.append(m.group(0)) or f"«{len(cites) - 1}»", text)
+    back = lambda s: re.sub(r"«(\d+)»", lambda m: cites[int(m.group(1))], s)
     text = re.sub(r"([.?!。])[ \t]*((?:«[^»]+»[ \t]*)+)", r" \2\1 ", text)
     # 제목 줄(#)은 문장이 아니다 — 세면 절이 많은 쪽(팀)이 체계적으로 불리해진다 (Q3 읽다가 발견). 표는 칸 단위로
     text = "\n".join(_lines(text))
@@ -43,7 +48,7 @@ def sentences(text: str) -> list[str]:
     # 점 찍은 대문자 약어(U.S. B.V.)도 — Q7 읽기 노트 준비 중 "BYD Europe B.V.를" 이 세 조각으로 잘린 걸 발견
     text = re.sub(r"\b(?:[A-Z]\.){2,}", lambda m: m.group(0).replace(".", ""), text)
     text = re.sub(r"\b(Inc|Co|Ltd|Corp|St|No|vs)\.", r"\1", text)
-    return [s.strip() for s in SENT_SPLIT_RE.split(text) if s.strip()]
+    return [back(s.strip()) for s in SENT_SPLIT_RE.split(text) if s.strip()]
 
 
 def grounding_rate(text: str) -> float:
@@ -55,9 +60,25 @@ def grounding_rate(text: str) -> float:
     return hit / len(sents)
 
 
+def split_cite(c: str, known) -> list[str]:
+    """«A, B» 처럼 한 괄호에 문서 여럿을 묶은 인용을 나눈다. 제목 속 쉼표('Tesla, Inc.')는 살리고,
+    '…2026 p99-100, p145-147' 처럼 쪽만 붙인 것은 앞 제목에 이어 붙인다.
+    묶은 인용 때문에 실제로 읽은 문서가 허위 인용 경보로 잡혔다 (업로드 실행 2회에서 7개)."""
+    if c in known:
+        return [c]
+    out, buf = [], ""
+    for part in c.split(", "):
+        buf = f"{buf}, {part}" if buf else part
+        page = re.sub(r" p\d+(-\d+)?$", "", out[-1]) + " " + part if out and re.fullmatch(r"p\d+(-\d+)?", part) else ""
+        if buf in known or page in known:
+            out.append(buf if buf in known else page)
+            buf = ""
+    return out + ([buf] if buf else [])
+
+
 def false_citations(text: str, visited: set) -> set:
     """인용됐지만 읽은 적 없는 문서 (ALARM, 0이어야 함)."""
-    return set(citations(text)) - set(visited)
+    return {t for c in citations(text) for t in split_cite(c, visited)} - set(visited)
 
 
 def concentration(text: str) -> float:
@@ -79,15 +100,20 @@ def duplicate_rate(read_attempts: int, unique_read: int) -> float:
 def number_mismatch(text: str, docs: dict[str, str]) -> list[tuple[str, str]]:
     """각 문장의 숫자 토큰이 그 문장에서 인용한 문서 텍스트에 없으면 (문장, 숫자) 반환. (ALARM)"""
     bad: list[tuple[str, str]] = []
+    # 원문의 "5 percent" · "7 per cent" 도 "5%" 로 본다 — 4-4 · 4-5 의 숫자 경보가 거의 다 이 오탐이었다
+    # ponytail: "1.6 million" ↔ "160만" 같은 단위 바꿈은 아직 오탐. 자주 나오면 여기서 같이 맞출 것
+    norm = {}
+    doc = lambda t: norm.setdefault(t, re.sub(r"(\d)\s*per\s?cent\b", r"\1%", docs.get(t, "")))
     for sent in sentences(text):
-        cited = [m.group(1).strip() for m in CIT_RE.finditer(sent)]
+        cited = [t for m in CIT_RE.finditer(sent) for t in split_cite(m.group(1).strip(), docs)]
+        claim = CIT_RE.sub("", sent)   # 인용 제목 속 숫자(«… 2024 p25-26»)는 주장이 아니다 — 업로드 조각 제목에서 오탐
         # 날짜·서수(2021년 10월 1일, 3번째, 3사)는 영어 원문과 표기가 달라 비교가 안 되므로 뺀다
-        for num in [m.group(0) for m in NUM_RE.finditer(sent)
-                    if not re.match(r"\s*(년|월|일|번째|위|사|개국|분기)", sent[m.end():])]:
+        for num in [m.group(0) for m in NUM_RE.finditer(claim)
+                    if not re.match(r"\s*(년|월|일|번째|위|사|개국|분기)", claim[m.end():])]:
             if not cited:
                 bad.append((sent, num))
                 continue
-            if not any(num in docs.get(t, "") for t in cited):
+            if not any(num in doc(t) for t in cited):
                 bad.append((sent, num))
     return bad
 
@@ -120,6 +146,10 @@ if __name__ == "__main__":
     assert sentences("BYD Europe B.V.를 세웠다 «X». LG Energy Solution Inc. 가 있다 «Y». 다음") == \
         ["BYD Europe BV를 세웠다 «X»", "LG Energy Solution Inc 가 있다 «Y»", "다음"]
     assert sentences("U.S. 공장이다 «X».") == ["US 공장이다 «X»"]
+    # 인용 제목 속 마침표: 자르지도 바꾸지도 않는다 → 숫자 검사가 제목으로 원문을 찾을 수 있다
+    assert sentences("점유율 17.6% «Tesla, Inc.». 다음 «Kia».") == ["점유율 17.6% «Tesla, Inc.»", "다음 «Kia»"]
+    assert number_mismatch("점유율 17.6% «Tesla, Inc.».", {"Tesla, Inc.": "a share of 17.6%"}) == []
+    assert number_mismatch("점유율이 높다 «R 2024 p25-26».", {"R 2024 p25-26": "share is high"}) == []   # 제목 속 숫자
     # 표: 칸 하나 = 문장 하나. 머리 행·구분선·축 이름·빈칸 표시는 세지 않는다
     t = "| 축 | A | B |\n|---|---|---|\n| 위치 | 2위 «X». | 자료 없음 |\n| 기술 | (카드 없음) | 전고체 «Y» |"
     assert sentences(t) == ["2위 «X»", "전고체 «Y»"] and grounding_rate(t) == 1.0
@@ -129,6 +159,10 @@ if __name__ == "__main__":
     # false_citations: 읽지 않은 인용
     assert false_citations("«A»«B»", {"A"}) == {"B"}
     assert false_citations("«A»", {"A"}) == set()
+    # 한 괄호에 묶은 인용: 나눠서 본다 (제목 속 쉼표는 살림, 쪽만 붙인 건 앞 제목에 이음)
+    seen = {"Samsung SDI", "Tesla, Inc.", "R p99-100", "R p145-147"}
+    assert false_citations("«Samsung SDI, R p145-147» «Tesla, Inc.» «R p99-100, p145-147»", seen) == set()
+    assert false_citations("«Samsung SDI, Nope»", seen) == {"Nope"}
     # concentration: 최다 인용 비중
     assert concentration("«A»«A»«B»") == 2 / 3
     assert concentration("인용 없음") == 0.0
@@ -140,6 +174,8 @@ if __name__ == "__main__":
     assert number_mismatch("매출 15% 증가«A».", docs) == []
     bad = number_mismatch("매출 3.2% 증가«B».", docs)
     assert len(bad) == 1 and bad[0][1] == "3.2%"
+    assert number_mismatch("점유율 5%, 7% «P».", {"P": "a share of 5 percent and 7 per cent"}) == []
+    assert len(number_mismatch("점유율 8% «P».", {"P": "a share of 5 percent"})) == 1
     bad2 = number_mismatch("수치 99가 있다.", docs)  # 인용 없이 숫자
     assert len(bad2) == 1
     # compute

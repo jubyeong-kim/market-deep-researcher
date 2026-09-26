@@ -15,22 +15,24 @@ OUT = BASE / "output/ablation_rescored.json"
 docs = json.load(open(BASE / "data/ev-battery/corpus.json", encoding="utf-8"))["docs"]
 runs = json.load(open(BASE / "output/ablation.json", encoding="utf-8"))["runs"]
 prev = {r["dir"]: r for r in json.load(open(OUT, encoding="utf-8"))["runs"] if "dir" in r} if OUT.exists() else {}
-changed = 0
+changed = num_changed = 0
 for r in runs:
     if r.get("error"):
         continue
     rep = (RUNS / r["dir"] / "report.md").read_text(encoding="utf-8")
     r["grounding_rate_old"], r["sentence_count_old"] = r["grounding_rate"], r["sentence_count"]
     r["grounding_rate_prev"] = prev.get(r["dir"], r)["grounding_rate"]
+    r["number_mismatch_prev"] = len(prev.get(r["dir"], r)["number_mismatch"])
     r["grounding_rate"] = metrics.grounding_rate(rep)
     r["sentence_count"] = len(metrics.sentences(rep))
     r["number_mismatch"] = metrics.number_mismatch(rep, docs)
     changed += abs(r["grounding_rate"] - r["grounding_rate_prev"]) > 1e-9
-json.dump({"note": "제목 줄 제외 · 약어(Inc. · B.V.) 마침표 처리 · 표는 칸 단위 후 재채점", "runs": runs},
+    num_changed += len(r["number_mismatch"]) != r["number_mismatch_prev"]
+json.dump({"note": "제목 줄 제외 · 약어(Inc. · B.V.) 마침표 처리 · 표는 칸 단위 · 숫자 검사에서 N percent = N% 후 재채점", "runs": runs},
           open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
 ok = [r for r in runs if not r.get("error")]
-print(f"직전 규칙 대비 근거율이 바뀐 실행: {changed}/{len(ok)}")
+print(f"직전 규칙 대비 근거율이 바뀐 실행: {changed}/{len(ok)} · 숫자 불일치 개수가 바뀐 실행: {num_changed}/{len(ok)}")
 for q in sorted({r["qid"] for r in ok}):
     print(f"Q{q}")
     for label in ["base", "no_assignment", "no_zones", "no_redelegation", "no_links", "baseline"]:
@@ -38,4 +40,4 @@ for q in sorted({r["qid"] for r in ok}):
         mean = lambda k: st.mean(r[k] for r in R)
         print(f"  {label:16} 근거율 원래 {mean('grounding_rate_old'):.2f} → 직전 {mean('grounding_rate_prev'):.2f}"
               f" → 지금 {mean('grounding_rate'):.2f}   문장 {mean('sentence_count'):.0f}"
-              f"   숫자불일치 {st.mean(len(r['number_mismatch']) for r in R):.1f}")
+              f"   숫자불일치 {mean('number_mismatch_prev'):.1f} → {st.mean(len(r['number_mismatch']) for r in R):.1f}")

@@ -1,5 +1,5 @@
 {
-  "note": "제목 줄 제외 · 약어(Inc. · B.V.) 마침표 처리 · 표는 칸 단위 후 재채점 (grounding_rate_prev = B.V. 규칙 추가 직전 값)",
+  "note": "제목 줄 제외 · 약어(Inc. · B.V.) 마침표 처리 · 표는 칸 단위 · 숫자 검사에서 N percent = N% 후 재채점",
   "runs": [
     {
       "label": "base",
@@ -23,7 +23,8 @@
       "dir": "0923-212143_base",
       "grounding_rate_old": 0.4166666666666667,
       "sentence_count_old": 12,
-      "grounding_rate_prev": 0.625
+      "grounding_rate_prev": 0.625,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_assignment",
@@ -47,7 +48,8 @@
       "dir": "0923-212301_no_assignment",
       "grounding_rate_old": 0.4,
       "sentence_count_old": 10,
-      "grounding_rate_prev": 0.5714285714285714
+      "grounding_rate_prev": 0.5714285714285714,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_zones",
@@ -71,7 +73,8 @@
       "dir": "0923-212408_no_zones",
       "grounding_rate_old": 0.4,
       "sentence_count_old": 10,
-      "grounding_rate_prev": 0.6666666666666666
+      "grounding_rate_prev": 0.6666666666666666,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_redelegation",
@@ -95,7 +98,8 @@
       "dir": "0923-212524_no_redelegation",
       "grounding_rate_old": 0.5714285714285714,
       "sentence_count_old": 14,
-      "grounding_rate_prev": 0.8
+      "grounding_rate_prev": 0.8,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_links",
@@ -119,7 +123,8 @@
       "dir": "0923-212650_no_links",
       "grounding_rate_old": 0.4166666666666667,
       "sentence_count_old": 12,
-      "grounding_rate_prev": 0.625
+      "grounding_rate_prev": 0.625,
+      "number_mismatch_prev": 0
     },
     {
       "label": "baseline",
@@ -135,10 +140,6 @@
         [
           "2020년 6월 CATL의 이사인 Robin Zeng은 회사가 100만 마일(또는 160만 킬로미터)의 주행이 가능한 전기자동차용 배터리를 개발했다고 발표했다 «CATL»",
           "160"
-        ],
-        [
-          "2022년 상반기 SNE research에 따르면 CATL은 34%의 시장점유율로 세계에서 1위를 차지했다 «CATL»",
-          "34%"
         ]
       ],
       "isolation": 1.0,
@@ -155,7 +156,8 @@
       "dir": "0923-212747_baseline",
       "grounding_rate_old": 0.896551724137931,
       "sentence_count_old": 58,
-      "grounding_rate_prev": 1.0
+      "grounding_rate_prev": 1.0,
+      "number_mismatch_prev": 1
     },
     {
       "label": "base",
@@ -179,7 +181,8 @@
       "dir": "0923-212842_base",
       "grounding_rate_old": 0.4166666666666667,
       "sentence_count_old": 12,
-      "grounding_rate_prev": 0.625
+      "grounding_rate_prev": 0.625,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_assignment",
@@ -191,12 +194,7 @@
       "false_citations": [],
       "concentration": 1.0,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "2022년 상반기에는 SNE 리서치 조사에 따르면 34% 시장 점유율로 세계 1위를 유지했다 «CATL»",
-          "34%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.30841610036591743,
       "alarms": [],
       "stop_reason": "내용 충분",
@@ -208,7 +206,8 @@
       "dir": "0923-213030_no_assignment",
       "grounding_rate_old": 0.7083333333333334,
       "sentence_count_old": 24,
-      "grounding_rate_prev": 0.85
+      "grounding_rate_prev": 0.85,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_zones",
@@ -226,10 +225,6 @@
           "160"
         ],
         [
-          "2022년 상반기 CATL은 전 세계 시장에서 34%의 시장점유율로 1위를 기록했다 «CATL»",
-          "34%"
-        ],
-        [
           "2023년 CATL은 미국 7억9000만 달러 상당의 국가 보조금을 받았다 «CATL»",
           "9000"
         ]
@@ -245,7 +240,8 @@
       "dir": "0923-213247_no_zones",
       "grounding_rate_old": 0.7647058823529411,
       "sentence_count_old": 34,
-      "grounding_rate_prev": 0.8666666666666667
+      "grounding_rate_prev": 0.8666666666666667,
+      "number_mismatch_prev": 2
     },
     {
       "label": "no_redelegation",
@@ -257,12 +253,7 @@
       "false_citations": [],
       "concentration": 0.4166666666666667,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "자동차 제조 분야에서 Tesla는 2024년 배터리 전기차 시장에서 17.6%의 점유율로 시장을 선도했으나, 2025년 말에는 세계 선도 제조업체로서의 지위를 상실했다 «Tesla, Inc»",
-          "17.6%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.10073695183147076,
       "alarms": [],
       "stop_reason": "내용 충분",
@@ -276,7 +267,8 @@
       "dir": "0923-213516_no_redelegation",
       "grounding_rate_old": 0.28125,
       "sentence_count_old": 32,
-      "grounding_rate_prev": 0.4166666666666667
+      "grounding_rate_prev": 0.4166666666666667,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_links",
@@ -300,7 +292,8 @@
       "dir": "0923-213842_no_links",
       "grounding_rate_old": 0.625,
       "sentence_count_old": 16,
-      "grounding_rate_prev": 0.8333333333333334
+      "grounding_rate_prev": 0.8333333333333334,
+      "number_mismatch_prev": 0
     },
     {
       "label": "baseline",
@@ -313,10 +306,6 @@
       "concentration": 1.0,
       "duplicate_rate": 0.0,
       "number_mismatch": [
-        [
-          "2022년 상반기에는 SNE 리서치에 따라 34%의 시장 점유율로 세계 1위를 기록했다 «CATL»",
-          "34%"
-        ],
         [
           "2020년 6월에는 로빈 젱 이사가 100만 마일(160만 킬로미터)까지 주행 가능한 전기자동차용 배터리를 개발했다고 발표했다 «CATL»",
           "160"
@@ -336,7 +325,8 @@
       "dir": "0923-213928_baseline",
       "grounding_rate_old": 0.8,
       "sentence_count_old": 35,
-      "grounding_rate_prev": 1.0
+      "grounding_rate_prev": 1.0,
+      "number_mismatch_prev": 1
     },
     {
       "label": "base",
@@ -360,7 +350,8 @@
       "dir": "0923-214034_base",
       "grounding_rate_old": 0.36363636363636365,
       "sentence_count_old": 11,
-      "grounding_rate_prev": 0.5714285714285714
+      "grounding_rate_prev": 0.5714285714285714,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_assignment",
@@ -384,7 +375,8 @@
       "dir": "0923-214118_no_assignment",
       "grounding_rate_old": 0.42857142857142855,
       "sentence_count_old": 14,
-      "grounding_rate_prev": 0.6
+      "grounding_rate_prev": 0.6,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_zones",
@@ -408,7 +400,8 @@
       "dir": "0923-214229_no_zones",
       "grounding_rate_old": 0.5,
       "sentence_count_old": 14,
-      "grounding_rate_prev": 0.7
+      "grounding_rate_prev": 0.7,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_redelegation",
@@ -420,12 +413,7 @@
       "false_citations": [],
       "concentration": 0.36363636363636365,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "Samsung SDI는 2022년 상반기 기준으로 세계 6위의 배터리 제조업체로 5% 시장점유율을 기록했다 «Samsung SDI»",
-          "5%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.10744965315903014,
       "alarms": [],
       "stop_reason": "설정으로 끔",
@@ -437,7 +425,8 @@
       "dir": "0923-214445_no_redelegation",
       "grounding_rate_old": 0.45454545454545453,
       "sentence_count_old": 22,
-      "grounding_rate_prev": 0.6666666666666666
+      "grounding_rate_prev": 0.6666666666666666,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_links",
@@ -461,7 +450,8 @@
       "dir": "0923-214551_no_links",
       "grounding_rate_old": 0.38461538461538464,
       "sentence_count_old": 13,
-      "grounding_rate_prev": 0.5555555555555556
+      "grounding_rate_prev": 0.5555555555555556,
+      "number_mismatch_prev": 0
     },
     {
       "label": "baseline",
@@ -477,10 +467,6 @@
         [
           "2020년 6월 CATL 이사 로빈 젱은 회사가 전기자동차용 배터리로 160만 킬로미터(100만 마일 상당)에 해당하는 주행거리를 달성했다고 발표했다 «CATL»",
           "160"
-        ],
-        [
-          "2022년 상반기 SNE Research에 따르면 CATL은 34%의 시장점유율로 세계 1위를 기록했다 «CATL»",
-          "34%"
         ]
       ],
       "isolation": 1.0,
@@ -497,7 +483,8 @@
       "dir": "0923-214644_baseline",
       "grounding_rate_old": 0.8695652173913043,
       "sentence_count_old": 46,
-      "grounding_rate_prev": 1.0
+      "grounding_rate_prev": 1.0,
+      "number_mismatch_prev": 1
     },
     {
       "label": "base",
@@ -517,14 +504,6 @@
         [
           "2011년 말 시점에 LG화학은 세계 3대 배터리 제조사로 자리잡았으며 연간 10억 개의 모바일 배터리와 2,000만 개의 자동차 배터리 셀을 생산할 수 있었다 «LG Chem»",
           "2,000"
-        ],
-        [
-          "2022년 상반기 삼성SDI는 SNE 리서치에 따르면 시장점유율 5%로 세계 6위에 랭크되었다 «Samsung SDI»",
-          "5%"
-        ],
-        [
-          "글로벌 시장 진출을 추진한 결과, 2022년 상반기에 세계 배터리 시장에서 5위를 기록하며 7%의 시장점유율을 확보했다 «SK Innovation»",
-          "7%"
         ]
       ],
       "isolation": 0.14225085647082886,
@@ -538,7 +517,8 @@
       "dir": "0923-214826_base",
       "grounding_rate_old": 0.6333333333333333,
       "sentence_count_old": 30,
-      "grounding_rate_prev": 0.7916666666666666
+      "grounding_rate_prev": 0.7916666666666666,
+      "number_mismatch_prev": 2
     },
     {
       "label": "no_assignment",
@@ -550,12 +530,7 @@
       "false_citations": [],
       "concentration": 0.5454545454545454,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "2022년 상반기 기준 SNE research에 따르면 SK On의 시장 점유율은 7%로 세계 5위를 차지했다 «SK Innovation»",
-          "7%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.055173639919402634,
       "alarms": [],
       "stop_reason": "바퀴 소진",
@@ -569,7 +544,8 @@
       "dir": "0923-215041_no_assignment",
       "grounding_rate_old": 0.4166666666666667,
       "sentence_count_old": 24,
-      "grounding_rate_prev": 0.5555555555555556
+      "grounding_rate_prev": 0.5555555555555556,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_zones",
@@ -587,14 +563,6 @@
           "3"
         ],
         [
-          "2022년 상반기 기준 삼성SDI는 전 세계 배터리 시장에서 6위로 5%의 시장점유율을 차지했다 «Samsung SDI»",
-          "5%"
-        ],
-        [
-          "2022년 상반기 기준 SK온은 세계 5위를 차지하였으며 시장점유율은 7%였다 «SK Innovation»",
-          "7%"
-        ],
-        [
           "IRA는 에너지 및 기후 변화에 3,910억 달러를 투자하도록 명시했다 «Inflation Reduction Act»",
           "3,910"
         ]
@@ -610,7 +578,8 @@
       "dir": "0923-215525_no_zones",
       "grounding_rate_old": 0.6052631578947368,
       "sentence_count_old": 38,
-      "grounding_rate_prev": 0.7419354838709677
+      "grounding_rate_prev": 0.7419354838709677,
+      "number_mismatch_prev": 2
     },
     {
       "label": "no_redelegation",
@@ -630,10 +599,6 @@
         [
           "2011년 말 기준 LG Chem은 세계 3위 규모 배터리 제조업체로, 연간 10억 개의 모바일 배터리와 2000만 개의 자동차 배터리 셀을 생산할 수 있는 능력을 보유하고 있었다 «LG Chem»",
           "2000"
-        ],
-        [
-          "2022년 상반기 SK On은 SNE research에 따르면 7%의 시장점유율로 세계 5위에 랭크되었다 «SK Innovation»",
-          "7%"
         ]
       ],
       "isolation": 0.08713287295116066,
@@ -647,7 +612,8 @@
       "dir": "0923-215758_no_redelegation",
       "grounding_rate_old": 0.6470588235294118,
       "sentence_count_old": 34,
-      "grounding_rate_prev": 0.8461538461538461
+      "grounding_rate_prev": 0.8461538461538461,
+      "number_mismatch_prev": 2
     },
     {
       "label": "no_links",
@@ -667,14 +633,6 @@
         [
           "2011년 말 세계 3위 제조사로서 연간 10억 개의 모바일배터리와 2000만 개의 자동차배터리 셀 생산 능력을 갖추었다 «LG Chem»",
           "2000"
-        ],
-        [
-          "2022년 상반기 기준으로 삼성SDI는 세계 시장에서 5% 시장점유율로 6위를 차지했다 «Samsung SDI»",
-          "5%"
-        ],
-        [
-          "2022년 상반기 기준 SNE 리서치에 따르면 SK온은 세계 5위 배터리 제조사로 시장점유율 7%를 기록했다 «SK Innovation»",
-          "7%"
         ]
       ],
       "isolation": 0.10806716814044719,
@@ -688,7 +646,8 @@
       "dir": "0923-220040_no_links",
       "grounding_rate_old": 0.6071428571428571,
       "sentence_count_old": 28,
-      "grounding_rate_prev": 0.7727272727272727
+      "grounding_rate_prev": 0.7727272727272727,
+      "number_mismatch_prev": 2
     },
     {
       "label": "baseline",
@@ -700,16 +659,7 @@
       "false_citations": [],
       "concentration": 0.4444444444444444,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "2022년 상반기 기준 시장점유율에서는 SK온이 세계 5위로 7%의 점유율을 기록했으며 «SK Innovation», 삼성SDI는 세계 6위로 5%의 점유율을 차지했다 «Samsung SDI»",
-          "7%"
-        ],
-        [
-          "2022년 상반기 기준 시장점유율에서는 SK온이 세계 5위로 7%의 점유율을 기록했으며 «SK Innovation», 삼성SDI는 세계 6위로 5%의 점유율을 차지했다 «Samsung SDI»",
-          "5%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 1.0,
       "alarms": [],
       "stop_reason": "baseline",
@@ -724,7 +674,8 @@
       "dir": "0923-220131_baseline",
       "grounding_rate_old": 0.5,
       "sentence_count_old": 26,
-      "grounding_rate_prev": 0.6190476190476191
+      "grounding_rate_prev": 0.6190476190476191,
+      "number_mismatch_prev": 0
     },
     {
       "label": "base",
@@ -736,16 +687,7 @@
       "false_citations": [],
       "concentration": 0.43333333333333335,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "2022년 상반기 기준 삼성SDI는 세계 시장에서 6위를 차지하며 시장점유율 5%를 보유하고 있었다 «Samsung SDI»",
-          "5%"
-        ],
-        [
-          "SK온은 2022년 상반기 기준 세계 시장에서 5위를 차지하며 시장점유율 7%를 보유하고 있었다 «SK Innovation»",
-          "7%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.04430580187484165,
       "alarms": [],
       "stop_reason": "바퀴 소진",
@@ -759,7 +701,8 @@
       "dir": "0923-220603_base",
       "grounding_rate_old": 0.5945945945945946,
       "sentence_count_old": 37,
-      "grounding_rate_prev": 0.7333333333333333
+      "grounding_rate_prev": 0.7333333333333333,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_assignment",
@@ -775,10 +718,6 @@
         [
           "이 공장은 약 500만 평방미터 규모로 약 31,000명의 근로자를 고용하며 연간 152만 대의 생산 능력을 갖추고 있다 «Hyundai Motor Company»",
           "152"
-        ],
-        [
-          "2022년 상반기에 글로벌 5위로 7% 시장점유율을 기록했다 «SK Innovation»",
-          "7%"
         ]
       ],
       "isolation": 0.054964188199912944,
@@ -794,7 +733,8 @@
       "dir": "0923-221023_no_assignment",
       "grounding_rate_old": 0.6944444444444444,
       "sentence_count_old": 36,
-      "grounding_rate_prev": 0.8333333333333334
+      "grounding_rate_prev": 0.8333333333333334,
+      "number_mismatch_prev": 1
     },
     {
       "label": "no_zones",
@@ -823,7 +763,8 @@
       "dir": "0923-221238_no_zones",
       "grounding_rate_old": 0.6538461538461539,
       "sentence_count_old": 26,
-      "grounding_rate_prev": 0.8
+      "grounding_rate_prev": 0.8,
+      "number_mismatch_prev": 1
     },
     {
       "label": "no_redelegation",
@@ -843,10 +784,6 @@
         [
           "2011년 말 기준으로 세계 3위의 배터리 메이커로서 연간 10억 개의 모바일 배터리와 2천만 개의 자동차 배터리 셀을 생산하는 능력을 갖추었다 «LG Chem»",
           "10"
-        ],
-        [
-          "2022년 상반기 기준으로 세계 배터리 시장에서 7%의 점유율을 기록하며 5위를 차지했다 «SK Innovation»",
-          "7%"
         ]
       ],
       "isolation": 0.1421940856270157,
@@ -860,7 +797,8 @@
       "dir": "0923-221436_no_redelegation",
       "grounding_rate_old": 0.6111111111111112,
       "sentence_count_old": 36,
-      "grounding_rate_prev": 0.7857142857142857
+      "grounding_rate_prev": 0.7857142857142857,
+      "number_mismatch_prev": 2
     },
     {
       "label": "no_links",
@@ -872,16 +810,7 @@
       "false_citations": [],
       "concentration": 0.4444444444444444,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "2022년 상반기 기준으로 삼성SDI는 세계 6위의 시장점유율 5%를 기록했습니다 «Samsung SDI»",
-          "5%"
-        ],
-        [
-          "2022년 상반기 기준으로 SK온은 SNE Research 통계에서 세계 5위의 시장점유율 7%를 기록했다 «SK Innovation»",
-          "7%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.07278953759598836,
       "alarms": [],
       "stop_reason": "바퀴 소진",
@@ -893,7 +822,8 @@
       "dir": "0923-221719_no_links",
       "grounding_rate_old": 0.5333333333333333,
       "sentence_count_old": 30,
-      "grounding_rate_prev": 0.64
+      "grounding_rate_prev": 0.64,
+      "number_mismatch_prev": 0
     },
     {
       "label": "baseline",
@@ -909,14 +839,6 @@
         [
           "2011년 말 기준으로 LG Chem은 세계 3위 제조사로서 연간 생산능력이 10억 개의 모바일 배터리와 2천만 개의 자동차 배터리 셀에 달했다 «LG Chem»",
           "10"
-        ],
-        [
-          "SK On은 세계 5위로 시장점유율 7%를 기록했다 «SK Innovation»",
-          "7%"
-        ],
-        [
-          "Samsung SDI는 세계 6위로 시장점유율 5%를 기록했다 «Samsung SDI»",
-          "5%"
         ]
       ],
       "isolation": 1.0,
@@ -933,7 +855,8 @@
       "dir": "0923-221855_baseline",
       "grounding_rate_old": 0.5454545454545454,
       "sentence_count_old": 44,
-      "grounding_rate_prev": 0.6857142857142857
+      "grounding_rate_prev": 0.6857142857142857,
+      "number_mismatch_prev": 1
     },
     {
       "label": "base",
@@ -949,14 +872,6 @@
         [
           "니켈망간코발트산화물(NMC)과 니켈코발트알루미늄산화물(NCA)은 300 Wh/kg 이상의 비에너지를 제공하며 전기자동차의 전동화에 널리 사용됩니다 «Lithium-ion battery»",
           "300"
-        ],
-        [
-          "2022년 상반기 기준으로 SK On은 세계 5위의 시장점유율 7%를 기록했다 «SK Innovation»",
-          "7%"
-        ],
-        [
-          "2022년 상반기 Samsung SDI는 세계 6위로 5%의 시장점유율을 기록했다 «Samsung SDI»",
-          "5%"
         ]
       ],
       "isolation": 0.07266116163685987,
@@ -972,7 +887,8 @@
       "dir": "0923-222327_base",
       "grounding_rate_old": 0.6785714285714286,
       "sentence_count_old": 28,
-      "grounding_rate_prev": 0.8260869565217391
+      "grounding_rate_prev": 0.8260869565217391,
+      "number_mismatch_prev": 1
     },
     {
       "label": "no_assignment",
@@ -984,16 +900,7 @@
       "false_citations": [],
       "concentration": 0.5,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "2022년 상반기 기준 세계 시장에서 5% 점유율로 6위를 차지했습니다 «Samsung SDI»",
-          "5%"
-        ],
-        [
-          "2022년 상반기 기준 SK온은 세계 5위의 시장 점유율 7%를 기록했다 «SK Innovation»",
-          "7%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.04893647009079057,
       "alarms": [],
       "stop_reason": "바퀴 소진",
@@ -1007,7 +914,8 @@
       "dir": "0923-222658_no_assignment",
       "grounding_rate_old": 0.7272727272727273,
       "sentence_count_old": 44,
-      "grounding_rate_prev": 0.8648648648648649
+      "grounding_rate_prev": 0.8648648648648649,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_zones",
@@ -1027,14 +935,6 @@
         [
           "2011년 말 기준으로 LG Chem은 연간 10억 개의 모바일 배터리와 2,000만 개의 자동차 배터리 셀 생산 용량을 갖춘 세계 3위의 배터리 제조업체였다 «LG Chem»",
           "2,000"
-        ],
-        [
-          "삼성SDI는 에너지솔루션 부문을 중심으로 IT기기, 자동차, 에너지저장시스템(ESS) 용도의 충전식 배터리를 제조하며, 2022년 상반기 세계 6위의 5% 시장점유율을 기록했다 «Samsung SDI»",
-          "5%"
-        ],
-        [
-          "2022년 상반기 기준 SK온은 세계 배터리 시장에서 5위를 차지했으며 시장점유율은 7%였다 «SK Innovation»",
-          "7%"
         ]
       ],
       "isolation": 0.07318204087346025,
@@ -1050,7 +950,8 @@
       "dir": "0923-222956_no_zones",
       "grounding_rate_old": 0.6875,
       "sentence_count_old": 64,
-      "grounding_rate_prev": 0.7857142857142857
+      "grounding_rate_prev": 0.7857142857142857,
+      "number_mismatch_prev": 2
     },
     {
       "label": "no_redelegation",
@@ -1077,7 +978,8 @@
       "dir": "0923-223231_no_redelegation",
       "grounding_rate_old": 0.1,
       "sentence_count_old": 10,
-      "grounding_rate_prev": 0.2
+      "grounding_rate_prev": 0.2,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_links",
@@ -1093,14 +995,6 @@
         [
           "LG Chem은 1999년 한국 최초의 리튬이온 배터리를 개발하고 대량생산을 시작했으며 «LG Chem», 2011년 말 기준 세계 3위 규모의 배터리 제조사로서 연간 10억 개의 모바일 배터리와 2천만 개의 자동차 배터리 셀을 생산할 수 있는 역량을 갖췄다 «LG Chem»",
           "10"
-        ],
-        [
-          "2022년 상반기 기준으로 삼성SDI는 세계 시장에서 5%의 시장점유율을 기록하며 6위에 랭크되었다 «Samsung SDI»",
-          "5%"
-        ],
-        [
-          "2022년 상반기 기준으로 SK온은 SNE research 조사에서 세계 시장점유율 7%를 기록하며 세계 5위의 배터리 제조사로 평가되었다 «SK Innovation»",
-          "7%"
         ]
       ],
       "isolation": 0.044363944049287396,
@@ -1114,7 +1008,8 @@
       "dir": "0923-223534_no_links",
       "grounding_rate_old": 0.7166666666666667,
       "sentence_count_old": 60,
-      "grounding_rate_prev": 0.8431372549019608
+      "grounding_rate_prev": 0.8431372549019608,
+      "number_mismatch_prev": 1
     },
     {
       "label": "baseline",
@@ -1126,16 +1021,7 @@
       "false_citations": [],
       "concentration": 0.4375,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "SK온은 SNE 리서치 조사에서 7%의 시장점유율로 세계 5위에 위치했으며 «SK Innovation», 삼성SDI는 5%의 시장점유율로 세계 6위를 기록했다 «Samsung SDI»",
-          "7%"
-        ],
-        [
-          "SK온은 SNE 리서치 조사에서 7%의 시장점유율로 세계 5위에 위치했으며 «SK Innovation», 삼성SDI는 5%의 시장점유율로 세계 6위를 기록했다 «Samsung SDI»",
-          "5%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 1.0,
       "alarms": [],
       "stop_reason": "baseline",
@@ -1150,7 +1036,8 @@
       "dir": "0923-223618_baseline",
       "grounding_rate_old": 0.5555555555555556,
       "sentence_count_old": 27,
-      "grounding_rate_prev": 0.7142857142857143
+      "grounding_rate_prev": 0.7142857142857143,
+      "number_mismatch_prev": 0
     },
     {
       "label": "base",
@@ -1174,7 +1061,8 @@
       "dir": "0923-223914_base",
       "grounding_rate_old": 0.7540983606557377,
       "sentence_count_old": 61,
-      "grounding_rate_prev": 0.8363636363636363
+      "grounding_rate_prev": 0.8679245283018868,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_assignment",
@@ -1198,7 +1086,8 @@
       "dir": "0923-224055_no_assignment",
       "grounding_rate_old": 0.6486486486486487,
       "sentence_count_old": 37,
-      "grounding_rate_prev": 0.75
+      "grounding_rate_prev": 0.75,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_zones",
@@ -1210,12 +1099,7 @@
       "false_citations": [],
       "concentration": 0.2903225806451613,
       "duplicate_rate": 0.5555555555555556,
-      "number_mismatch": [
-        [
-          "배터리 전기차 시장에서 테슬라는 2024년에 17.6% 시장 점유율로 선도 위치를 차지했으나 «Tesla, Inc», 2025년 말에는 세계 선도 전기차 제조업체로서의 지위를 상실했다 «Tesla, Inc»",
-          "17.6%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.06982189146249687,
       "alarms": [],
       "stop_reason": "내용 충분",
@@ -1227,7 +1111,8 @@
       "dir": "0923-224430_no_zones",
       "grounding_rate_old": 0.7272727272727273,
       "sentence_count_old": 66,
-      "grounding_rate_prev": 0.8596491228070176
+      "grounding_rate_prev": 0.8909090909090909,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_redelegation",
@@ -1239,12 +1124,7 @@
       "false_citations": [],
       "concentration": 0.3382352941176471,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "Tesla는 2024년 배터리 전기차 시장에서 17.6% 점유율을 기록했다 «Tesla, Inc»",
-          "17.6%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.06976530833514036,
       "alarms": [],
       "stop_reason": "설정으로 끔",
@@ -1256,7 +1136,8 @@
       "dir": "0923-224707_no_redelegation",
       "grounding_rate_old": 0.7066666666666667,
       "sentence_count_old": 75,
-      "grounding_rate_prev": 0.8461538461538461
+      "grounding_rate_prev": 0.873015873015873,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_links",
@@ -1282,7 +1163,8 @@
       "dir": "0923-225048_no_links",
       "grounding_rate_old": 0.6666666666666666,
       "sentence_count_old": 54,
-      "grounding_rate_prev": 0.75
+      "grounding_rate_prev": 0.782608695652174,
+      "number_mismatch_prev": 0
     },
     {
       "label": "baseline",
@@ -1309,7 +1191,8 @@
       "dir": "0923-225139_baseline",
       "grounding_rate_old": 0.7592592592592593,
       "sentence_count_old": 54,
-      "grounding_rate_prev": 0.8723404255319149
+      "grounding_rate_prev": 0.9111111111111111,
+      "number_mismatch_prev": 0
     },
     {
       "label": "base",
@@ -1340,7 +1223,8 @@
       "dir": "0923-225447_base",
       "grounding_rate_old": 0.7115384615384616,
       "sentence_count_old": 52,
-      "grounding_rate_prev": 0.8222222222222222
+      "grounding_rate_prev": 0.8604651162790697,
+      "number_mismatch_prev": 1
     },
     {
       "label": "no_assignment",
@@ -1385,7 +1269,8 @@
       "dir": "0923-225835_no_assignment",
       "grounding_rate_old": 0.631578947368421,
       "sentence_count_old": 38,
-      "grounding_rate_prev": 0.8064516129032258
+      "grounding_rate_prev": 0.8064516129032258,
+      "number_mismatch_prev": 5
     },
     {
       "label": "no_zones",
@@ -1409,7 +1294,8 @@
       "dir": "0923-230152_no_zones",
       "grounding_rate_old": 0.7105263157894737,
       "sentence_count_old": 38,
-      "grounding_rate_prev": 0.8181818181818182
+      "grounding_rate_prev": 0.8709677419354839,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_redelegation",
@@ -1433,7 +1319,8 @@
       "dir": "0923-230415_no_redelegation",
       "grounding_rate_old": 0.7368421052631579,
       "sentence_count_old": 57,
-      "grounding_rate_prev": 0.8235294117647058
+      "grounding_rate_prev": 0.8571428571428571,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_links",
@@ -1445,16 +1332,7 @@
       "false_citations": [],
       "concentration": 0.3333333333333333,
       "duplicate_rate": 0.0,
-      "number_mismatch": [
-        [
-          "2022년 상반기 현재 글로벌 배터리 산업의 경쟁 구도에서 Samsung SDI는 세계 6위로 5%의 시장점유율을 차지하고 있었으며«Samsung SDI», SK Innovation에서 분사된 SK On은 세계 5위로 7%의 시장점유율을 기록했다«SK Innovation»",
-          "5%"
-        ],
-        [
-          "2022년 상반기 현재 글로벌 배터리 산업의 경쟁 구도에서 Samsung SDI는 세계 6위로 5%의 시장점유율을 차지하고 있었으며«Samsung SDI», SK Innovation에서 분사된 SK On은 세계 5위로 7%의 시장점유율을 기록했다«SK Innovation»",
-          "7%"
-        ]
-      ],
+      "number_mismatch": [],
       "isolation": 0.06255993048064246,
       "alarms": [],
       "stop_reason": "바퀴 소진",
@@ -1466,7 +1344,8 @@
       "dir": "0923-230813_no_links",
       "grounding_rate_old": 0.7272727272727273,
       "sentence_count_old": 66,
-      "grounding_rate_prev": 0.8135593220338984
+      "grounding_rate_prev": 0.8421052631578947,
+      "number_mismatch_prev": 0
     },
     {
       "label": "baseline",
@@ -1493,7 +1372,8 @@
       "dir": "0923-230926_baseline",
       "grounding_rate_old": 0.8541666666666666,
       "sentence_count_old": 48,
-      "grounding_rate_prev": 1.0
+      "grounding_rate_prev": 1.0,
+      "number_mismatch_prev": 0
     },
     {
       "label": "base",
@@ -1525,7 +1405,8 @@
       "dir": "0924-104534_base",
       "grounding_rate_old": 0.75,
       "sentence_count_old": 36,
-      "grounding_rate_prev": 0.9
+      "grounding_rate_prev": 0.9,
+      "number_mismatch_prev": 1
     },
     {
       "label": "no_assignment",
@@ -1556,7 +1437,8 @@
       "dir": "0924-104921_no_assignment",
       "grounding_rate_old": 0.7708333333333334,
       "sentence_count_old": 48,
-      "grounding_rate_prev": 0.9024390243902439
+      "grounding_rate_prev": 0.9024390243902439,
+      "number_mismatch_prev": 1
     },
     {
       "label": "no_zones",
@@ -1585,7 +1467,8 @@
       "dir": "0924-105309_no_zones",
       "grounding_rate_old": 0.7564102564102564,
       "sentence_count_old": 78,
-      "grounding_rate_prev": 0.8309859154929577
+      "grounding_rate_prev": 0.855072463768116,
+      "number_mismatch_prev": 1
     },
     {
       "label": "no_redelegation",
@@ -1611,7 +1494,8 @@
       "dir": "0924-105555_no_redelegation",
       "grounding_rate_old": 0.6363636363636364,
       "sentence_count_old": 55,
-      "grounding_rate_prev": 0.7291666666666666
+      "grounding_rate_prev": 0.7608695652173914,
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_links",
@@ -1642,7 +1526,8 @@
       "dir": "0924-105909_no_links",
       "grounding_rate_old": 0.7636363636363637,
       "sentence_count_old": 55,
-      "grounding_rate_prev": 0.875
+      "grounding_rate_prev": 0.9130434782608695,
+      "number_mismatch_prev": 1
     },
     {
       "label": "baseline",
@@ -1669,7 +1554,8 @@
       "dir": "0924-110004_baseline",
       "grounding_rate_old": 0.7777777777777778,
       "sentence_count_old": 45,
-      "grounding_rate_prev": 0.9459459459459459
+      "grounding_rate_prev": 1.0,
+      "number_mismatch_prev": 0
     }
   ]
 }
