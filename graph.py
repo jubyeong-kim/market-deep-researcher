@@ -395,9 +395,12 @@ WEB_SYSTEM = ("너는 시장조사 팀의 자료 담당이다. 웹 검색 도구
 
 
 def web_title(url: str, name, taken) -> str:
-    """인용에 쓸 제목: '웹 사이트 페이지제목' (짧게 — 조사관이 «»에 그대로 옮겨 적어야 한다)"""
+    """인용에 쓸 제목: 페이지 제목만 짧게 (괄호 · 사이트 이름은 뺀다). 조사관이 «»에 그대로 옮겨 적어야 한다 —
+    첫 웹 실험에서 '웹 kci.go.kr … 분석 (KCI 학술논문)' 을 조사관이 '… 분석' 으로 줄여 적어 허위 인용 · 숫자 경보가 됐다.
+    위키 제목과 겹치면 번호를 붙인다 (겹치면 조사관 자료에서 위키 원문을 덮는다). 주소는 web.json 과 데모 원문 패널에"""
     host = re.sub(r"^www\.", "", urllib.parse.urlparse(url).hostname or "")
-    base = re.sub(r"\s+", " ", re.sub(r"[«»|\n]", " ", f"웹 {host} {name or ''}")).strip()[:50].strip()
+    clean = re.sub(r"\s*[(\[][^)\]]*[)\]]", "", re.sub(r"[«»|\n]", " ", str(name or "")))
+    base = re.sub(r"\s+", " ", clean).strip(" -·:")[:40].strip() or host
     title, n = base, 2
     while title in taken:
         title, n = f"{base} {n}", n + 1
@@ -431,7 +434,7 @@ def web(s: State):
             if len(text) < 500:   # 메뉴만 있거나 로그인 벽
                 alarms.append(f"웹 페이지 본문이 짧아 버림: {url} ({len(text)}자)")
                 continue
-            title = web_title(url, item.get("제목"), have.keys() | found.keys())
+            title = web_title(url, item.get("제목"), have.keys() | found.keys() | s["corpus"]["docs"].keys())
             found[title], urls = {"url": url, "text": text}, urls | {url}
             got.append(title)
         web_for[p["title"]] = got

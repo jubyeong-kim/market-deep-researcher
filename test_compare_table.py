@@ -157,10 +157,10 @@ def web_ask(system, user, coord=False):
         return '{"목차":[{"절":"시장 규모","시작문서":"LG Chem"},{"절":"LG","시작문서":"SK Innovation"}]}'
     if "편집자" in system:
         return "머리.\n---\n맺음."
-    if "'시장 규모' 절" in system and "«웹 rep.example" not in user:
+    if "'시장 규모' 절" in system and "«시장 보고서»" not in user:
         return "자료가 없다.\n부족: 예"            # 첫 바퀴: 코퍼스엔 답이 없다
     if "'시장 규모' 절" in system:
-        return "시장은 2025년 120억 원이다 «웹 rep.example 시장 보고서».\n부족: 아니오"
+        return "시장은 2025년 120억 원이다 «시장 보고서».\n부족: 아니오"
     return "LG는 배터리를 만든다 «SK Innovation».\n부족: 아니오"
 
 
@@ -173,8 +173,8 @@ for on in (True, False):
                                 "drafts": {}, "alarms": []})
     if on:
         assert len(searched) == 1 and "시장 규모" in searched[0]                  # 부족을 적은 절만 검색
-        assert "웹 rep.example 시장 보고서" in out["drafts"]["시장 규모"]["read"]   # 웹 먼저, 남는 예산은 코퍼스
-        assert "«웹 rep.example 시장 보고서»" in out["report"]
+        assert "시장 보고서" in out["drafts"]["시장 규모"]["read"]   # 웹 먼저, 남는 예산은 코퍼스
+        assert "«시장 보고서»" in out["report"]
         assert any("못 받음" in a and "blocked" in a for a in out["alarms"])      # 못 받은 페이지는 경보, 다음 것으로
         docs = {**graph.load_corpus(cfg["market"])["docs"], **{t: v["text"] for t, v in out["web"].items()}}
         m = metrics.compute(out["report"], {t for d in out["drafts"].values() for t in d["read"]}, docs, 1, 1, 1)
@@ -182,6 +182,10 @@ for on in (True, False):
     else:
         assert searched == [] and "web" not in out or not out["web"]                # 끄면 검색 안 함
 llm.search, collect.fetch_page = search_real, fetch_real
+# 웹 제목: 괄호 · 사이트 이름 없이 짧게, 위키 제목과 겹치면 번호 (조사관이 줄여 적어 허위 인용이 됐던 문제)
+assert graph.web_title("https://www.kci.go.kr/x", "쓰기 평가 과제 분석 (KCI 학술논문)", set()) == "쓰기 평가 과제 분석"
+assert graph.web_title("https://grammarly.com/", "Grammarly", {"Grammarly"}) == "Grammarly 2"
+assert graph.web_title("https://a.example/", "", set()) == "a.example"
 # 웹 원고 채택: 첫 원고가 '부족'이고 웹으로 쓴 원고가 '충분'이면 인용이 적어도 채택. 웹이 아니면 예전 규칙 (인용 수)
 old = {"E": {"text": "a «X». b «X». c «X».", "read": ["X"], "insufficient": True}}
 new = {"E": {"text": "e-rater «웹 e».", "read": ["웹 e"], "insufficient": False, "round": 1}}

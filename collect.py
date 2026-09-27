@@ -10,6 +10,9 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from html.parser import HTMLParser
+import ssl
+
+import certifi
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"   # 한국어 위키는 회사 문서가 1~3천 자로 짧아 영어로 바꿈
 WIKI_UA = "market-deep-researcher/0.1 (student project)"  # ASCII only
@@ -347,7 +350,8 @@ def fetch_page(url: str) -> str:
             or re.fullmatch(r"[\d.]+|\[.*\]", u.hostname):
         raise ValueError(f"받지 않는 주소: {url}")
     req = urllib.request.Request(url, headers={"User-Agent": WEB_UA})
-    with urllib.request.urlopen(req, timeout=20) as r:
+    # 윈도우 기본 인증서 목록으로는 arxiv · PMC 가 CERTIFICATE_VERIFY_FAILED 였다 (첫 웹 실험 9건) → certifi 목록. 검사는 끄지 않는다
+    with urllib.request.urlopen(req, timeout=20, context=ssl.create_default_context(cafile=certifi.where())) as r:
         data, ctype = r.read(5_000_000), r.headers.get("Content-Type", "")
         charset = r.headers.get_content_charset() or "utf-8"
     if "pdf" in ctype or data[:5] == b"%PDF-":

@@ -19,6 +19,7 @@ app = FastAPI()
 DEMO_CFG = copy.deepcopy(graph.CFG)
 DEMO_CFG["switches"]["uploads"] = True
 DEMO_CFG["switches"]["subject_check"] = True   # 목차 확인 때 벌린 절 후보에 ⚠ (빼는 건 사람이)
+DEMO_CFG["switches"]["web_search"] = True     # '부족'을 적은 절은 웹에서 찾는다. 자료 단계에서 '분석'을 고르면 끈다
 
 _state = {"running": False, "done": False, "queue": None, "result": None,
            "question": "", "removed": []}
@@ -26,7 +27,7 @@ _lock = threading.Lock()
 
 # 단계별 대화 세션 (1인용, 인메모리): scope → upload → question → toc(목차 확인)
 _session = {"stage": "scope", "scope": "", "turns": 0, "history": [], "pending_choice": False,
-            "pending_q": "", "pending_plan": [], "pending_axes": [], "removed": []}
+            "pending_q": "", "pending_plan": [], "pending_axes": [], "removed": [], "web": True}
 
 
 def _push(line: str) -> None:
@@ -37,7 +38,9 @@ def _push(line: str) -> None:
 
 def _run_target(question: str, approved_plan=None, label: str = "base", axes=None) -> None:
     try:
-        res = graph.run(question, DEMO_CFG, label=label, on_log=_push, approved_plan=approved_plan, approved_axes=axes)
+        cfg = copy.deepcopy(DEMO_CFG)
+        cfg["switches"]["web_search"] = _session["web"]
+        res = graph.run(question, cfg, label=label, on_log=_push, approved_plan=approved_plan, approved_axes=axes)
         with _lock:
             _state["result"] = {k: v for k, v in res.items() if k != "corpus"}
     except Exception as e:
@@ -139,11 +142,15 @@ def result():
 
 @app.get("/doc/{title}")
 def doc(title: str):
-    """코퍼스 문서 앞 1500자 (없으면 404)."""
+    """코퍼스 문서 앞 1500자. 없으면 마지막 실행이 웹에서 받은 페이지 (주소와 함께). 둘 다 없으면 404."""
     docs = graph.load_corpus(graph.CFG["market"], uploads=True)["docs"]
-    if title not in docs:
+    if title in docs:
+        return {"title": title, "excerpt": docs[title][:1500]}
+    with _lock:
+        page = ((_state["result"] or {}).get("web") or {}).get(title)
+    if not page:
         raise HTTPException(404, "문서 없음")
-    return {"title": title, "excerpt": docs[title][:1500]}
+    return {"title": title, "url": page["url"], "excerpt": page["text"][:1500]}
 
 
 def _readiness() -> tuple:
@@ -178,7 +185,7 @@ def state():
 def reset():
     """대화를 처음(시장 정하기)부터 다시."""
     _session.update(stage="scope", scope="", turns=0, history=[], pending_choice=False,
-                    pending_q="", pending_plan=[], pending_axes=[], removed=[])
+                    pending_q="", pending_plan=[], pending_axes=[], removed=[], web=True)
     return state()
 
 
@@ -224,13 +231,11 @@ def chat(body: dict):
     if stage == "upload":  # 2. 자료 수집 + 준비도 확인
         if _session["pending_choice"]:
             if "웹검색" in text:
-                _session["pending_choice"] = False
-                _session["stage"] = "question"
+                _session.update(pending_choice=False, stage="question", web=True)
                 return {"stage": "question",
-                        "reply": "웹 수집은 아직 준비 중입니다. 지금 자료로 진행합니다. 어떤 조사를 할까요?"}
+                        "reply": "조사하다 자료가 모자란 절은 웹에서 찾습니다. 어떤 조사를 할까요?"}
             if "분석" in text:
-                _session["pending_choice"] = False
-                _session["stage"] = "question"
+                _session.update(pending_choice=False, stage="question", web=False)
                 return {"stage": "question",
                         "reply": "지금 자료로 진행합니다. 어떤 조사를 할까요?"}
             return {"stage": "upload",
@@ -241,7 +246,9 @@ def chat(body: dict):
                 _session["stage"] = "question"
                 return {"stage": "question",
                         "reply": (f"이용할 준비가 되었습니다 "
-                                  f"(문서 {s['doc_count']}건, {s['total_chars']}자). 어떤 조사를 할까요?"),
+                                  f"(문서 {s['doc_count']}건, {s['total_chars']}자). "
+                                  + ("조사하다 자료가 모자란 절은 웹에서 찾습니다. " if _session["web"] else "")
+                                  + "어떤 조사를 할까요?"),
                         "stats": s}
             _session["pending_choice"] = True
             return {"stage": "upload",

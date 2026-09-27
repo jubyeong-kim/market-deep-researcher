@@ -144,7 +144,7 @@ async function showDoc(title) {
     const res = await fetch('/doc/' + encodeURIComponent(title));
     if (!res.ok) { excerptEl.textContent = '문서를 찾을 수 없음: ' + title; return; }
     const d = await res.json();
-    excerptEl.textContent = '«' + d.title + '»\n\n' + d.excerpt;
+    excerptEl.textContent = '«' + d.title + '»\n' + (d.url ? d.url + '\n' : '') + '\n' + d.excerpt;   // 웹 자료는 주소도
   } catch (e) {
     excerptEl.textContent = '원문 조회 실패';
   }
