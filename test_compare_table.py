@@ -194,6 +194,8 @@ long = "TOPIK Essay Writing Guide with Model Essays and Scoring Tips for Every L
 got = graph.web_title("https://t.example/", long, set())
 assert len(got) <= 60 and long.startswith(got + " "), got                                   # 단어 중간에서 안 자름
 assert metrics.number_mismatch("만족도는 86.8%다 «P».", {"P": "만족도\n86.8\n%\n"}) == []      # 숫자와 % 가 떨어진 페이지
+assert metrics.sentences("상관은 .71이고 QWK는 .432~.924였다 «P». 끝났다.2022년") == \
+    ["상관은 .71이고 QWK는 .432~.924였다 «P»", "끝났다", "2022년"]                          # 0을 뺀 소수에서 안 자름
 # 웹 원고 채택: 첫 원고가 '부족'이고 웹으로 쓴 원고가 '충분'이면 인용이 적어도 채택. 웹이 아니면 예전 규칙 (인용 수)
 old = {"E": {"text": "a «X». b «X». c «X».", "read": ["X"], "insufficient": True}}
 new = {"E": {"text": "e-rater «웹 e».", "read": ["웹 e"], "insufficient": False, "round": 1}}
