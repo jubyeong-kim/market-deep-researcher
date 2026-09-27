@@ -398,9 +398,13 @@ def web_title(url: str, name, taken) -> str:
     """인용에 쓸 제목: 페이지 제목만 짧게 (괄호 · 사이트 이름은 뺀다). 조사관이 «»에 그대로 옮겨 적어야 한다 —
     첫 웹 실험에서 '웹 kci.go.kr … 분석 (KCI 학술논문)' 을 조사관이 '… 분석' 으로 줄여 적어 허위 인용 · 숫자 경보가 됐다.
     위키 제목과 겹치면 번호를 붙인다 (겹치면 조사관 자료에서 위키 원문을 덮는다). 주소는 web.json 과 데모 원문 패널에"""
+    # 둘째 판(데모): 40자에서 자른 '… 에듀테크 2관' 을 조사관이 '… 2관왕 수상' 으로 채워 적었고, '… 비교 연구 - 피드백' 의
+    # 꼬리를 떼어 적었다 → 단어 중간에서 자르지 않고, ' - 사이트' · ': 부제' 꼬리는 앞부분이 12자 이상이면 뗀다
     host = re.sub(r"^www\.", "", urllib.parse.urlparse(url).hostname or "")
-    clean = re.sub(r"\s*[(\[][^)\]]*[)\]]", "", re.sub(r"[«»|\n]", " ", str(name or "")))
-    base = re.sub(r"\s+", " ", clean).strip(" -·:")[:40].strip() or host
+    clean = re.sub(r"\s*[(\[][^)\]]*[)\]]", "", str(name or ""))
+    head = re.split(r"\s+[-|—–:]\s+|:\s+", clean)[0]
+    clean = re.sub(r"\s+", " ", re.sub(r"[«»|\n]", " ", head if len(head.strip()) >= 12 else clean)).strip(" -·:")
+    base = (clean if len(clean) <= 60 else clean[:60].rsplit(" ", 1)[0]).strip() or host
     title, n = base, 2
     while title in taken:
         title, n = f"{base} {n}", n + 1

@@ -1463,7 +1463,7 @@
       "grounding_rate_old": 0.7564102564102564,
       "sentence_count_old": 78,
       "grounding_rate_prev": 0.855072463768116,
-      "number_mismatch_prev": 1
+      "number_mismatch_prev": 0
     },
     {
       "label": "no_redelegation",

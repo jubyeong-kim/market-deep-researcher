@@ -121,7 +121,8 @@ def number_mismatch(text: str, docs: dict[str, str]) -> list[tuple[str, str]]:
     # 원문의 "5 percent" · "7 per cent" 도 "5%" 로 본다 — 4-4 · 4-5 의 숫자 경보가 거의 다 이 오탐이었다
     # ponytail: "1.6 million" ↔ "160만" 같은 단위 바꿈은 아직 오탐. 자주 나오면 여기서 같이 맞출 것
     norm = {}
-    doc = lambda t: norm.setdefault(t, re.sub(r"(\d)\s*per\s?cent\b", r"\1%", docs.get(t, "")))
+    # 웹 페이지는 숫자와 '%' 가 다른 칸이라 받은 글자에 "86.8\n%" 로 떨어져 있다 (작은 시장 데모, 클리포) → 공백도 붙여 본다
+    doc = lambda t: norm.setdefault(t, re.sub(r"(\d)\s*(?:per\s?cent\b|%)", r"\1%", docs.get(t, "")))
     for sent in sentences(text):
         cited = [t for m in CIT_RE.finditer(sent) for t in split_cite(m.group(1).strip(), docs)]
         claim = CIT_RE.sub("", sent)   # 인용 제목 속 숫자(«… 2024 p25-26»)는 주장이 아니다 — 업로드 조각 제목에서 오탐

@@ -186,6 +186,14 @@ llm.search, collect.fetch_page = search_real, fetch_real
 assert graph.web_title("https://www.kci.go.kr/x", "쓰기 평가 과제 분석 (KCI 학술논문)", set()) == "쓰기 평가 과제 분석"
 assert graph.web_title("https://grammarly.com/", "Grammarly", {"Grammarly"}) == "Grammarly 2"
 assert graph.web_title("https://a.example/", "", set()) == "a.example"
+assert graph.web_title("https://k.example/", "한국어 쓰기 교육을 위한 AI 피드백과 교사 피드백 비교 연구 - 피드백", set()) \
+    == "한국어 쓰기 교육을 위한 AI 피드백과 교사 피드백 비교 연구"                              # 꼬리 뗌
+assert graph.web_title("https://c.example/", "클리포 - 수행평가 자동채점·피드백 리포트", set()) \
+    == "클리포 - 수행평가 자동채점·피드백 리포트"                                             # 앞이 짧으면 그대로
+long = "TOPIK Essay Writing Guide with Model Essays and Scoring Tips for Every Level of Learner"
+got = graph.web_title("https://t.example/", long, set())
+assert len(got) <= 60 and long.startswith(got + " "), got                                   # 단어 중간에서 안 자름
+assert metrics.number_mismatch("만족도는 86.8%다 «P».", {"P": "만족도\n86.8\n%\n"}) == []      # 숫자와 % 가 떨어진 페이지
 # 웹 원고 채택: 첫 원고가 '부족'이고 웹으로 쓴 원고가 '충분'이면 인용이 적어도 채택. 웹이 아니면 예전 규칙 (인용 수)
 old = {"E": {"text": "a «X». b «X». c «X».", "read": ["X"], "insufficient": True}}
 new = {"E": {"text": "e-rater «웹 e».", "read": ["웹 e"], "insufficient": False, "round": 1}}
