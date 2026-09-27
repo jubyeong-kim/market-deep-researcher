@@ -9,6 +9,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter
+from html.parser import HTMLParser
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"   # 한국어 위키는 회사 문서가 1~3천 자로 짧아 영어로 바꿈
 WIKI_UA = "market-deep-researcher/0.1 (student project)"  # ASCII only
@@ -141,12 +142,20 @@ def _skip_title(t: str) -> bool:
     return any(p.search(t) for p in _YEAR_RES)
 
 
-TOPIC = re.compile(r"batter(y|ies)|electric vehicle|EVs?|lithium|cathode", re.I)   # ponytail: 시장이 바뀌면 config로 뺄 것
+# 시장별 (주제어: 밀도 필터, 시드 검색에 붙이는 말). build 가 시장 이름으로 고른다
+# ev-battery 수집 때 \b 가 백스페이스 문자로 들어가 'EV' 는 한 번도 안 맞았다 (코퍼스는 그 상태로 만들어졌다)
+TOPICS = {
+    "ev-battery": (r"batter(y|ies)|electric vehicle|\bEVs?\b|lithium|cathode", " battery OR electric vehicle"),
+    "korean-writing": (r"essay|writing|grammar|spell|feedback|scoring|assessment|proficiency|Korean|tutor",
+                       " writing OR language"),
+}
+TOPIC = re.compile(TOPICS["ev-battery"][0], re.I)
+SEARCH_HINT = TOPICS["ev-battery"][1]
 
 
 def _search_title(q: str) -> str:
     """시드 이름을 실제 위키 제목으로 (동음이의·다른 표기 대응): 검색 상위 결과 중 주제어가 든 첫 문서."""
-    data = _wiki_api({"action": "query", "list": "search", "srsearch": q + " battery OR electric vehicle",
+    data = _wiki_api({"action": "query", "list": "search", "srsearch": q + SEARCH_HINT,
                       "srlimit": 5, "format": "json"})
     hits = [h["title"] for h in data.get("query", {}).get("search", [])]
     return hits[0] if hits else q
@@ -301,6 +310,55 @@ def web_collect(market: str, parts: list[str]) -> dict:
     raise NotImplementedError("web search sub-agents: TODO")
 
 
+class _Text(HTMLParser):
+    """본문 블록(p · li · 제목 · 표 칸)의 글자만 모은다. 메뉴 · 스크립트는 버린다.
+    ponytail: 태그 기준 추림이라 div 로만 된 페이지는 비어 나온다 → 그런 페이지는 fetch_page 가 버림"""
+    KEEP, SKIP = {"p", "li", "h1", "h2", "h3", "h4", "td", "th", "blockquote"}, {"script", "style", "nav", "footer"}
+
+    def __init__(self):
+        super().__init__()
+        self.keep = self.skip = 0
+        self.parts = []
+
+    def handle_starttag(self, tag, attrs):
+        self.keep += tag in self.KEEP
+        self.skip += tag in self.SKIP
+
+    def handle_endtag(self, tag):
+        if tag in self.KEEP and self.keep:
+            self.keep -= 1
+            self.parts.append("\n")
+        if tag in self.SKIP and self.skip:
+            self.skip -= 1
+
+    def handle_data(self, data):
+        if self.keep and not self.skip:
+            self.parts.append(data)
+
+
+WEB_UA = "Mozilla/5.0 (compatible; market-deep-researcher/0.1; student project)"
+
+
+def fetch_page(url: str) -> str:
+    """웹 페이지 본문 글자. http(s) 만 받는다 — URL 은 모델이 준 것이라 file:// · 내 컴퓨터 주소는 막는다.
+    PDF 는 pymupdf 로 (쪽 경계 없이 이어서 — 조사관은 앞 6천 자만 읽으니 긴 PDF 는 앞부분만 쓰인다)"""
+    u = urllib.parse.urlparse(url)
+    if u.scheme not in ("http", "https") or not u.hostname or u.hostname == "localhost" \
+            or re.fullmatch(r"[\d.]+|\[.*\]", u.hostname):
+        raise ValueError(f"받지 않는 주소: {url}")
+    req = urllib.request.Request(url, headers={"User-Agent": WEB_UA})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        data, ctype = r.read(5_000_000), r.headers.get("Content-Type", "")
+        charset = r.headers.get_content_charset() or "utf-8"
+    if "pdf" in ctype or data[:5] == b"%PDF-":
+        import pymupdf
+        with pymupdf.open(stream=data, filetype="pdf") as pdf:
+            return "\n".join(p.get_text() for p in pdf)
+    p = _Text()
+    p.feed(data.decode(charset, errors="ignore"))
+    return re.sub(r"[ \t\r\f\v]+", " ", re.sub(r"\n\s*\n+", "\n", "".join(p.parts))).strip()
+
+
 def main() -> None:
     args = sys.argv[1:]
     if not args:
@@ -322,6 +380,9 @@ def main() -> None:
             print("사용법: python collect.py build <market> <seed1> ... [--n 5] [--no-intro-filter]")
             sys.exit(1)
         market, seeds = rest[0], rest[1:]
+        global TOPIC, SEARCH_HINT
+        pattern, SEARCH_HINT = TOPICS[market]
+        TOPIC = re.compile(pattern, re.I)
         wiki = wiki_collect(seeds, target_docs=target_docs, intro_filter=intro_filter,
                             checkpoint=os.path.join("data", market, "_checkpoint.json"))
         uploads = load_uploads(os.path.join("data", market, "uploads"))

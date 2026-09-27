@@ -144,6 +144,60 @@ for rule_on in (True, False):
     assert all((graph.SUMMARY_RULE in x) == rule_on for x in summary_sys)
 llm.ask = fake_ask
 
+# 웹 검색 (web_search): '부족'을 적은 절만 검색 → 받은 페이지를 다음 바퀴에 읽고 인용, 인용 검사도 받는다
+import collect
+searched, fetch_real, search_real = [], collect.fetch_page, llm.search
+llm.search = lambda system, user: searched.append(user) or \
+    '{"자료":[{"제목":"막힌 곳","url":"https://blocked.example/x"},{"제목":"시장 보고서","url":"https://www.rep.example/a"}]}'
+collect.fetch_page = lambda url: (_ for _ in ()).throw(OSError("403")) if "blocked" in url else "시장은 2025년 120억 원이다. " * 40
+
+
+def web_ask(system, user, coord=False):
+    if "코디네이터" in system:
+        return '{"목차":[{"절":"시장 규모","시작문서":"LG Chem"},{"절":"LG","시작문서":"SK Innovation"}]}'
+    if "편집자" in system:
+        return "머리.\n---\n맺음."
+    if "'시장 규모' 절" in system and "«웹 rep.example" not in user:
+        return "자료가 없다.\n부족: 예"            # 첫 바퀴: 코퍼스엔 답이 없다
+    if "'시장 규모' 절" in system:
+        return "시장은 2025년 120억 원이다 «웹 rep.example 시장 보고서».\n부족: 아니오"
+    return "LG는 배터리를 만든다 «SK Innovation».\n부족: 아니오"
+
+
+llm.ask = web_ask
+for on in (True, False):
+    searched.clear()
+    cfg = copy.deepcopy(graph.CFG)
+    cfg["switches"]["web_search"] = on
+    out = graph.build().invoke({"question": "시장 규모는?", "cfg": cfg, "corpus": graph.load_corpus(cfg["market"]),
+                                "drafts": {}, "alarms": []})
+    if on:
+        assert len(searched) == 1 and "시장 규모" in searched[0]                  # 부족을 적은 절만 검색
+        assert "웹 rep.example 시장 보고서" in out["drafts"]["시장 규모"]["read"]   # 웹 먼저, 남는 예산은 코퍼스
+        assert "«웹 rep.example 시장 보고서»" in out["report"]
+        assert any("못 받음" in a and "blocked" in a for a in out["alarms"])      # 못 받은 페이지는 경보, 다음 것으로
+        docs = {**graph.load_corpus(cfg["market"])["docs"], **{t: v["text"] for t, v in out["web"].items()}}
+        m = metrics.compute(out["report"], {t for d in out["drafts"].values() for t in d["read"]}, docs, 1, 1, 1)
+        assert m["false_citations"] == [] and m["number_mismatch"] == [], m        # 웹 원문과 대조된다
+    else:
+        assert searched == [] and "web" not in out or not out["web"]                # 끄면 검색 안 함
+llm.search, collect.fetch_page = search_real, fetch_real
+# 웹 원고 채택: 첫 원고가 '부족'이고 웹으로 쓴 원고가 '충분'이면 인용이 적어도 채택. 웹이 아니면 예전 규칙 (인용 수)
+old = {"E": {"text": "a «X». b «X». c «X».", "read": ["X"], "insufficient": True}}
+new = {"E": {"text": "e-rater «웹 e».", "read": ["웹 e"], "insufficient": False, "round": 1}}
+assert graph.keep_better(old, {"E": {**new["E"], "web": True}})["E"]["text"] == "e-rater «웹 e»."
+assert graph.keep_better(old, new)["E"]["text"] == "a «X». b «X». c «X»."
+p = collect._Text()
+p.feed("<nav><li>메뉴</li></nav><script>x=1</script><h1>제목</h1><div><p>본문 <b>굵게</b> 끝</p></div>")
+assert "".join(p.parts).split() == ["제목", "본문", "굵게", "끝"], p.parts                   # 메뉴 · 스크립트는 버린다
+for bad in ("file:///C:/x.txt", "http://localhost:8000/", "http://127.0.0.1/"):
+    try:
+        collect.fetch_page(bad)
+        raise AssertionError(bad)
+    except ValueError:
+        pass
+llm.ask = fake_ask
+
 # 껐을 때: 표 없음, 카드 없음, 보고서 모양은 예전 그대로
 out = go(False)
 assert "비교표" not in out["report"] and all(x["card"] is None for x in out["drafts"].values())

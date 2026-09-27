@@ -33,12 +33,23 @@ def ask(system: str, user: str, coord: bool = False) -> str:
     raise ValueError(f"unknown backend: {backend}")
 
 
-async def _ask_claude(system, user, model):
+def search(system: str, user: str) -> str:
+    """웹 검색 (스위치 web_search 만). 도구는 이 호출에만 준다 — 원고를 쓰는 ask() 는 계속 tools=[].
+    모델은 URL 만 고르고, 본문은 코드가 받아 저장한다 (인용을 읽은 글과 대조하려고). 조사관 쪽 글자로 센다"""
+    USAGE["sub_chars"] += len(system) + len(user)
+    USAGE["calls"] += 1
+    if CFG["backend"] != "claude_sdk":
+        raise ValueError("web_search 는 claude_sdk 백엔드에서만 된다")
+    return anyio.run(_ask_claude, system, user, CFG["model"]["claude_sdk"], ["WebSearch"])
+
+
+async def _ask_claude(system, user, model, tools=()):
     # 구독 로그인(Claude Code)으로 돈다. system_prompt 를 직접 주면 기본 프롬프트(~2만 토큰)가 빠진다.
     # tools=[] 로 내장 도구를 아예 끈다 (allowed_tools=[] 는 자동승인 목록일 뿐이라 모델이 도구를 부르면 1턴 제한에 걸림)
+    # 검색(search)만 WebSearch 를 켜고 턴을 늘린다 (검색 → 답)
     from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage, TextBlock
-    opts = ClaudeAgentOptions(model=model, system_prompt=system, max_turns=1,
-                              tools=[], allowed_tools=[], setting_sources=[])
+    opts = ClaudeAgentOptions(model=model, system_prompt=system, max_turns=4 if tools else 1,
+                              tools=list(tools), allowed_tools=list(tools), setting_sources=[])
     for attempt in range(2):
         out = []
         try:

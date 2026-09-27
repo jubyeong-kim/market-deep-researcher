@@ -10,6 +10,7 @@ import operator
 import re
 import sys
 import time
+import urllib.parse
 from pathlib import Path
 from typing import Annotated, TypedDict
 
@@ -71,7 +72,10 @@ def keep_better(old: dict, new: dict) -> dict:
     merged = dict(old)
     for title, d in new.items():
         prev = merged.get(title)
-        if prev is None or n_citations(d["text"]) >= n_citations(prev["text"]):
+        # 웹 자료로 쓴 원고는 첫 원고가 '부족'이고 새 원고가 '충분'이면 인용이 적어도 채택한다 — 첫 웹 시험(작은 시장 Q2 ETS 절)에서
+        # 질문에 맞는 e-rater 원고(인용 6)가 질문과 상관없는 TOEFL 형식 원고(인용 13)에 밀려 버려졌다. 웹을 안 쓰면 예전 규칙 그대로
+        rescued = d.get("web") and prev and prev.get("insufficient") and not d["insufficient"] and n_citations(d["text"])
+        if prev is None or rescued or n_citations(d["text"]) >= n_citations(prev["text"]):
             merged[title] = d
         else:
             merged[title] = {**prev, "insufficient": d["insufficient"], "rejected": d["text"]}
@@ -93,6 +97,8 @@ class State(TypedDict, total=False):
     subjects: list        # 주인공 검사에 쓴 이름 (코드가 문서에서 확인한 것만) — metrics.json 에 남김
     alarms: Annotated[list, operator.add]
     drafts: Annotated[dict, keep_better]   # 절 -> {text, card, insufficient, read, attempts}
+    web: Annotated[dict, operator.or_]     # 웹 검색(web_search)으로 받은 페이지: 제목 -> {url, text}
+    web_for: dict                          # 이번 바퀴에 절마다 읽힐 웹 페이지 제목
     round: int
     stop_reason: str
     report: str
@@ -244,8 +250,13 @@ def first_reads(sections, corpus, cfg) -> dict:
 def dispatch(s: State):
     todo = [p for p in s["plan"] if s["round"] == 0 or s["drafts"].get(p["title"], {}).get("insufficient")]
     picks = assign(todo, s["plan"], s["drafts"], s["corpus"], s["cfg"])
+    web, web_for = s.get("web") or {}, s.get("web_for") or {}
+    for p in todo:   # 웹 검색에서 찾은 페이지를 먼저 읽고, 남는 예산은 코퍼스에서
+        if web_for.get(p["title"]):
+            picks[p["title"]] = (web_for[p["title"]] + (picks.get(p["title"]) or []))[:p["budget"]]
     return [Send("research", {
         "picks": picks.get(p["title"]),
+        "web": {t: web[t]["text"] for t in picks.get(p["title"]) or [] if t in web},
         "section": p, "question": s["question"], "cfg": s["cfg"], "corpus": s["corpus"], "round": s["round"],
         "axes": s.get("axes") or [],
         "others": [(q["title"], q["seed"]) for q in s["plan"] if q is not p],
@@ -290,7 +301,7 @@ SUMMARY_RULE = " '(업계 공통)' 이 붙은 칸은 한 회사의 차이로 쓰
 # ③ 조사 — 자기 절 자료만 읽고 원고까지 써서 올림 (원문은 여기서 소화되고 위로는 원고만)
 def research(task: dict):
     sec, cfg, corpus = task["section"], task["cfg"], task["corpus"]
-    docs = corpus["docs"]
+    docs = {**corpus["docs"], **task["web"]} if task.get("web") else corpus["docs"]
     # 구역: 남의 시작문서 + (재위임 바퀴라면) 남이 이미 읽은 문서는 피한다
     avoid = ({seed for _, seed in task["others"] if seed} | set(task["others_read"])) \
         if cfg["switches"]["zones"] else set()
@@ -324,7 +335,8 @@ def research(task: dict):
         insufficient = True
         alarms.append(f"빈 원고: {sec['title']} ({task['round']}바퀴, 읽음 {read})")
     return {"drafts": {sec["title"]: {"text": text, "card": card, "insufficient": insufficient, "read": read,
-                                      "raw": out, "attempts": len(read), "round": task["round"]}},
+                                      "raw": out, "attempts": len(read), "round": task["round"],
+                                      **({"web": True} if task.get("web") else {})}},
             "alarms": alarms,
             "log": [f"조사: {sec['title']} ({task['round']}바퀴) 읽음 {read}"
                     f"{' · 부족 신고' if insufficient else ''}{' · 빈 원고' if not text else ''}"]}
@@ -372,7 +384,59 @@ def check(s: State):
 
 
 def after_check(s: State):
-    return "synthesize" if s["stop_reason"] else dispatch(s)
+    if s["stop_reason"]:
+        return "synthesize"
+    return "web" if s["cfg"]["switches"].get("web_search") else dispatch(s)
+
+
+WEB_SYSTEM = ("너는 시장조사 팀의 자료 담당이다. 웹 검색 도구로 아래 절에 필요한 자료를 찾아라. "
+              "가진 자료(위키백과)에 답이 없어서 찾는 것이다 — 위키백과는 빼고 공식 사이트 · 보고서 · 논문 · 믿을 만한 기사를 우선하라. "
+              '가장 쓸모 있는 페이지 5개를 JSON으로만 답하라: {"자료":[{"제목":"...","url":"https://..."}]}')
+
+
+def web_title(url: str, name, taken) -> str:
+    """인용에 쓸 제목: '웹 사이트 페이지제목' (짧게 — 조사관이 «»에 그대로 옮겨 적어야 한다)"""
+    host = re.sub(r"^www\.", "", urllib.parse.urlparse(url).hostname or "")
+    base = re.sub(r"\s+", " ", re.sub(r"[«»|\n]", " ", f"웹 {host} {name or ''}")).strip()[:50].strip()
+    title, n = base, 2
+    while title in taken:
+        title, n = f"{base} {n}", n + 1
+    return title
+
+
+# ④-1 웹 검색 (스위치 web_search) — '부족'을 적은 절만 웹에서 새 자료를 찾아 다음 바퀴에 읽힌다.
+# 코퍼스에 답이 없으면 같은 코퍼스를 한 바퀴 더 돌아도 못 채운다 (작은 시장 실험에서 사용자가 짚음).
+# 모델은 URL 만 고르고 본문은 코드가 받는다 → 허위 인용 · 숫자 검사가 웹 자료에도 그대로 된다
+def web(s: State):
+    have = s.get("web") or {}
+    urls = {v["url"] for v in have.values()}
+    found, web_for, logs, alarms = {}, {}, [], []
+    for p in s["plan"]:
+        if not s["drafts"].get(p["title"], {}).get("insufficient"):
+            continue
+        out = llm.search(WEB_SYSTEM, f"[질문] {s['question']}\n[절] {p['title']}\n"
+                                     f"[검색어 힌트] {', '.join(p.get('keywords') or [])}")
+        got = []
+        for item in parse_json(out).get("자료", []):
+            url = str(item.get("url", "")) if isinstance(item, dict) else ""
+            if len(got) >= p["budget"]:
+                break
+            if not url or url in urls:
+                continue
+            try:
+                text = collect.fetch_page(url)
+            except Exception as e:
+                alarms.append(f"웹 페이지 못 받음: {url} ({type(e).__name__})")
+                continue
+            if len(text) < 500:   # 메뉴만 있거나 로그인 벽
+                alarms.append(f"웹 페이지 본문이 짧아 버림: {url} ({len(text)}자)")
+                continue
+            title = web_title(url, item.get("제목"), have.keys() | found.keys())
+            found[title], urls = {"url": url, "text": text}, urls | {url}
+            got.append(title)
+        web_for[p["title"]] = got
+        logs.append(f"웹 검색: {p['title']} → {got or '못 찾음'}")
+    return {"web": found, "web_for": web_for, "log": logs, "alarms": alarms}
 
 
 # ⑤ 종합 — 코디네이터는 절 제목만 보고 머리말·맺음말을 쓴다. 절 본문은 손대지 않는다(격리 유지, 인용 보존)
@@ -428,10 +492,12 @@ def build():
     g.add_node("research", research)
     g.add_node("check", check)
     g.add_node("synthesize", synthesize)
+    g.add_node("web", web)
     g.add_edge(START, "plan")
     g.add_conditional_edges("plan", dispatch, ["research"])
     g.add_edge("research", "check")
-    g.add_conditional_edges("check", after_check, ["research", "synthesize"])
+    g.add_conditional_edges("check", after_check, ["research", "synthesize", "web"])
+    g.add_conditional_edges("web", dispatch, ["research"])
     g.add_edge("synthesize", END)
     return g.compile()
 
@@ -465,7 +531,9 @@ def run(question: str, cfg: dict = None, label: str = "base", on_log=print, appr
         n = len(out.get("log", []))
     drafts = out["drafts"]
     visited = {t for d in drafts.values() for t in d["read"]}
-    m = metrics.compute(out["report"], visited, corpus["docs"], sum(d["attempts"] for d in drafts.values()),
+    web = out.get("web") or {}
+    docs = {**corpus["docs"], **{t: v["text"] for t, v in web.items()}}   # 웹 페이지도 인용 · 숫자 검사를 받는다
+    m = metrics.compute(out["report"], visited, docs, sum(d["attempts"] for d in drafts.values()),
                         llm.USAGE["coord_chars"], llm.USAGE["sub_chars"])
     m.update(alarms=out["alarms"], stop_reason=out["stop_reason"], calls=llm.USAGE["calls"],
              coord_chars=llm.USAGE["coord_chars"], sub_chars=llm.USAGE["sub_chars"],
@@ -479,8 +547,10 @@ def run(question: str, cfg: dict = None, label: str = "base", on_log=print, appr
     dump("plan.json", out["plan"])
     dump("visited.json", {t: x["read"] for t, x in drafts.items()})
     dump("metrics.json", m)
+    if web:
+        dump("web.json", web)   # 받은 웹 페이지 원문과 주소 (output/runs 는 gitignore — 남의 글이라 저장소엔 안 올린다)
     if out.get("axes"):
-        dump("cards.json", {"axes": out["axes"], "cards": {t: x.get("card") for t, x in drafts.items()}})
+        dump("cards.json",{"axes": out["axes"], "cards": {t: x.get("card") for t, x in drafts.items()}})
     for t, x in drafts.items():
         name = re.sub(r'[^0-9A-Za-z가-힣]+', '_', t)
         (d / "sections" / f"{name}.md").write_text(

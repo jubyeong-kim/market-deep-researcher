@@ -1,0 +1,8 @@
+[
+  {"id": 1, "type": "single", "question": "TOPIK(한국어능력시험)의 쓰기 영역은 어떻게 구성돼 있나?",
+   "why_split": "나누면 안 되는 예: TOPIK 문서 한 건으로 답이 끝난다"},
+  {"id": 2, "type": "scattered", "question": "글쓰기 자동 평가·피드백 분야의 주요 업체(Grammarly·Duolingo·ETS·Pearson)는 각각 무엇으로 경쟁하나?",
+   "why_split": "업체마다 문서가 따로 있고 근거가 겹치지 않는다 → 업체별 절이 자연스럽다"},
+  {"id": 3, "type": "follow", "question": "자동 에세이 채점 기술은 1960년대부터 지금의 대형 언어 모델까지 어떻게 발전해 왔나?",
+   "why_split": "한 기술을 시간순으로 따라가며 링크(자동 채점 → 자연어 처리 → 대형 언어 모델)를 타야 한다"}
+]

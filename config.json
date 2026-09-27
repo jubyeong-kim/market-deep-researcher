@@ -21,6 +21,7 @@
     "compare_table": false,
     "uploads": false,
     "subject_check": false,
-    "subject_rule": false
+    "subject_rule": false,
+    "web_search": false
   }
 }
